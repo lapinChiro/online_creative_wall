@@ -1,25 +1,10 @@
 /* Creative Wall Application Styles - Optimized */
-
-#app {
-  margin: 0;
-  padding: 0;
-  font-weight: normal;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  background: #1a1a1a;
-  font-family: 'Klee One', 'Comic Sans MS', cursive, sans-serif;
-  overflow: hidden;
-}
+/* Critical styles moved to inline CSS in index.html for faster rendering */
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
+
+/* Non-critical styles loaded after initial render */

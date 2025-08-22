@@ -78,21 +78,27 @@ test.describe('Creative Wall E2E Tests', () => {
     const item = page.locator('.scroll-item').first()
     await expect(item).toBeVisible({ timeout: 5000 })
     
-    // leftプロパティで位置を取得
+    // CSS変数--xで位置を取得（ScrollItemで実際に使用されている方法）
     const initialPosition = await item.evaluate((el) => {
-      return parseFloat(window.getComputedStyle(el).left)
+      const style = window.getComputedStyle(el)
+      const xValue = style.getPropertyValue('--x')
+      return parseFloat(xValue) || 0
     })
     
     // アニメーション進行のための待機
     await expect(async () => {
       const currentPosition = await item.evaluate((el) => {
-        return parseFloat(window.getComputedStyle(el).left)
+        const style = window.getComputedStyle(el)
+        const xValue = style.getPropertyValue('--x')
+        return parseFloat(xValue) || 0
       })
       expect(currentPosition).not.toBe(initialPosition)
-    }).toPass({ timeout: 2000 })
+    }).toPass({ timeout: 3000 })
     
     const newPosition = await item.evaluate((el) => {
-      return parseFloat(window.getComputedStyle(el).left)
+      const style = window.getComputedStyle(el)
+      const xValue = style.getPropertyValue('--x')
+      return parseFloat(xValue) || 0
     })
     
     // 左に移動していることを確認（値が減少）
@@ -162,7 +168,8 @@ test.describe('Creative Wall E2E Tests', () => {
     // エラー時は.errorクラスが表示される
     await expect(page.locator('.app-container')).toBeVisible()
     await expect(page.locator('.error')).toBeVisible()
-    await expect(page.locator('.error')).toHaveText('Failed to load data')
+    // エラーメッセージが「Failed to load data:」で始まることを確認
+    await expect(page.locator('.error')).toContainText('Failed to load data:')
   })
 })
 

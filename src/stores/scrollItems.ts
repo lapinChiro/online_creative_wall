@@ -4,13 +4,28 @@ import type { ScrollItem } from '@/types/scroll-item'
 import { isImageItem, isTextItem } from '@/types/scroll-item'
 
 /**
+ * アイテムのメタデータ型定義（将来使用予定）
+ */
+// interface ItemMetadata {
+//   lastUpdated: number
+//   updateCount: number
+//   isAnimating: boolean
+//   renderPriority: number
+// }
+
+/**
  * スクロールアイテムの状態管理ストア
- * アイテムのCRUD操作と速度制御を提供
+ * WeakMapによる効率的なメモリ管理とパフォーマンス最適化
  */
 export const useScrollItemsStore = defineStore('scrollItems', () => {
-  // State
-  const items = ref<ScrollItem[]>([])
+  // State（最適化版）
+  // const itemsSet = ref(new Set<ScrollItem>()) // Set使用で重複排除（将来使用予定）
+  const items = ref<ScrollItem[]>([]) // 通常のrefに戻す（互換性のため）
   const itemsMap = ref<Map<string, ScrollItem>>(new Map()) // 高速ルックアップ用Map
+  
+  // WeakMapによるメタデータ管理（自動GC対象）
+  // const itemsMetadata = new WeakMap<ScrollItem, ItemMetadata>() // 将来使用予定
+  
   const globalVelocity = ref(100) // グローバル速度（パーセント）
   const itemCount = ref(20) // 表示するアイテム数
   const showTexts = ref(true) // テキストアイテムの表示/非表示
@@ -94,6 +109,21 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     const item = itemsMap.value.get(id)
     if (item !== undefined) {
       item.position = position
+    }
+  }
+  
+  /**
+   * アイテムの位置を直接更新（オブジェクト生成を回避）
+   * @param id アイテムID
+   * @param x X座標
+   * @param y Y座標
+   */
+  function updateItemPositionDirect(id: string, x: number, y: number): void {
+    const item = itemsMap.value.get(id)
+    if (item !== undefined) {
+      // 直接プロパティを更新（オブジェクト生成なし）
+      item.position.x = x
+      item.position.y = y
     }
   }
   
@@ -281,6 +311,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     removeItems,
     updateItem,
     updateItemPosition,
+    updateItemPositionDirect,
     updateItemVelocity,
     updateItemZIndex,
     updateGlobalVelocity,

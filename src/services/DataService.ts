@@ -32,7 +32,7 @@ export class DataService {
       const response = await fetch(mediaUrl)
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${String(response.status)}`)
       }
       
       const data = await response.json() as MediaItem[]
@@ -90,7 +90,7 @@ export class DataService {
     return (
       typeof image.url === 'string' && 
       image.url.length > 0 &&
-      (image.title === undefined || typeof image.title === 'string')
+      typeof image.title === 'string'
     )
   }
   

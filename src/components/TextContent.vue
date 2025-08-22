@@ -42,64 +42,51 @@ const textStyle = computed(() => ({
   cursor: pointer;
   transition: transform 0.3s ease;
   user-select: none;
+  
+  
+  /* Subpixel anti-aliasing無効化でGPU負荷軽減 */
+  -webkit-font-smoothing: antialiased;
+  
+  /* Layer化ヒント */
+  will-change: opacity;
 }
 
 .chalk-text {
   position: relative;
 }
 
-.chalk-text::before {
-  content: attr(data-text);
-  position: absolute;
-  left: 0;
-  top: 0;
-  z-index: -1;
-  filter: blur(3px);
-  opacity: 0.7;
-}
-
-/* カラーバリエーション */
+/* GPU最適化版カラーバリエーション（単一shadowに統合） */
 .chalk-text.color-yellow {
   color: #ffe066;
-  text-shadow: 
-    2px 2px 4px rgba(255, 224, 102, 0.3),
-    0 0 10px rgba(255, 224, 102, 0.2),
-    0 0 20px rgba(255, 224, 102, 0.1);
+  --shadow-color: rgba(255, 224, 102, 0.4);
+  text-shadow: 0 0 8px var(--shadow-color);
 }
 
 .chalk-text.color-pink {
   color: #ff6b9d;
-  text-shadow: 
-    2px 2px 4px rgba(255, 107, 157, 0.3),
-    0 0 10px rgba(255, 107, 157, 0.2),
-    0 0 20px rgba(255, 107, 157, 0.1);
+  --shadow-color: rgba(255, 107, 157, 0.4);
+  text-shadow: 0 0 8px var(--shadow-color);
 }
 
 .chalk-text.color-blue {
   color: #4ecdc4;
-  text-shadow: 
-    2px 2px 4px rgba(78, 205, 196, 0.3),
-    0 0 10px rgba(78, 205, 196, 0.2),
-    0 0 20px rgba(78, 205, 196, 0.1);
+  --shadow-color: rgba(78, 205, 196, 0.4);
+  text-shadow: 0 0 8px var(--shadow-color);
 }
 
 .chalk-text.color-green {
   color: #95e77e;
-  text-shadow: 
-    2px 2px 4px rgba(149, 231, 126, 0.3),
-    0 0 10px rgba(149, 231, 126, 0.2),
-    0 0 20px rgba(149, 231, 126, 0.1);
+  --shadow-color: rgba(149, 231, 126, 0.4);
+  text-shadow: 0 0 8px var(--shadow-color);
 }
 
 .chalk-text.color-white {
   color: #ffffff;
-  text-shadow: 
-    2px 2px 4px rgba(255, 255, 255, 0.3),
-    0 0 10px rgba(255, 255, 255, 0.2),
-    0 0 20px rgba(255, 255, 255, 0.1);
+  --shadow-color: rgba(255, 255, 255, 0.4);
+  text-shadow: 0 0 8px var(--shadow-color);
 }
 
-/* チョークのテクスチャ風エフェクト */
+/* 軽量なチョーク風エフェクト（シンプル化） */
 .chalk-text::after {
   content: '';
   position: absolute;
@@ -107,15 +94,9 @@ const textStyle = computed(() => ({
   left: 0;
   right: 0;
   bottom: 0;
-  background: 
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 2px,
-      rgba(255, 255, 255, 0.03) 2px,
-      rgba(255, 255, 255, 0.03) 4px
-    );
+  background: rgba(255, 255, 255, 0.02);
   pointer-events: none;
+  mix-blend-mode: soft-light;
 }
 
 /* ホバーエフェクト */

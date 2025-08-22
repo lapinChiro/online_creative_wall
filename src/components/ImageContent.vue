@@ -76,6 +76,14 @@ const handleImageError = (): void => {
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.05);
   transition: transform 0.3s ease;
+  
+  /* GPU最適化 */
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  
+  /* Containment API */
+  contain: layout style paint;
 }
 
 .image-content img {
@@ -83,6 +91,10 @@ const handleImageError = (): void => {
   height: 100%;
   object-fit: cover;
   display: block;
+  
+  /* 画像のレンダリング最適化 */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
 }
 
 .image-content.loading {

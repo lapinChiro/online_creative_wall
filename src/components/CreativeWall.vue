@@ -61,17 +61,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
-import BlackBoard from './BlackBoard.vue'
+import { ref, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { useScrollItemsStore } from '@/stores/scrollItems'
 import { useScrollAnimation } from '@/composables/useScrollAnimation'
+import { useScrollAnimationWorker } from '@/composables/useScrollAnimationWorker'
 import { ScrollItemFactory } from '@/factories/ScrollItemFactory'
 import { ContentFactory } from '@/factories/ContentFactory'
 import { PositionService } from '@/services/PositionService'
 import { VelocityService } from '@/services/VelocityService'
 import { DataService, type FetchedImage } from '@/services/DataService'
 import { calculateBoardSize, SCROLL_CONFIG } from '@/config/scroll.config'
+import { PERFORMANCE_FLAGS } from '@/config/performance.config'
 import type { Position } from '@/types'
+import { createLogger } from '@/utils/logger'
+
+const logger = createLogger('CreativeWall')
+
+// Dynamic Import (always async for code splitting benefits)
+const BlackBoard = defineAsyncComponent(() => import('./BlackBoard.vue'))
 
 const scrollItemsStore = useScrollItemsStore()
 const loading = ref(true)
@@ -95,7 +102,15 @@ const itemFactory = new ScrollItemFactory(
 velocityService.setGlobalMultiplier(scrollItemsStore.globalVelocity)
 
 // Animation management - Initialize at setup level
-const animationController = useScrollAnimation(positionService)
+// Feature Flagに基づいてWorker版か通常版を選択
+const animationController = PERFORMANCE_FLAGS.USE_WEB_WORKER
+  ? useScrollAnimationWorker(positionService)
+  : useScrollAnimation(positionService)
+
+// デバッグモードでWorker使用状況を出力
+if (PERFORMANCE_FLAGS.DEBUG_MODE && import.meta.env.DEV) {
+  logger.debug('Using Web Worker:', PERFORMANCE_FLAGS.USE_WEB_WORKER)
+}
 
 // Data storage
 const fetchedImageData = ref<FetchedImage[]>([])

@@ -10,25 +10,29 @@
       ref="scrollAreaRef" 
       class="scroll-area"
     >
-      <TransitionGroup name="fade">
-        <ScrollItem
-          v-for="item in items"
-          :key="item.id"
-          :item="item"
-          @update-position="(pos: Position) => handlePositionUpdate(item.id, pos)"
-          @wrap-around="() => handleWrapAround(item.id)"
-          @remove="() => handleItemRemove(item.id)"
-        />
-      </TransitionGroup>
+      <!-- TransitionGroup削除でパフォーマンス向上 -->
+      <ScrollItem
+        v-for="item in virtualItems"
+        :key="item.id"
+        :ref="(el) => handleItemRef(el)"
+        :item="item"
+        @update-position="(pos: Position) => handlePositionUpdate(item.id, pos)"
+        @wrap-around="() => handleWrapAround(item.id)"
+        @remove="() => handleItemRemove(item.id)"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, toRef } from 'vue'
 import ScrollItem from './ScrollItem.vue'
 import type { ScrollItem as ScrollItemType } from '@/types/scroll-item'
 import type { Position } from '@/types'
+import { useVirtualScroll } from '@/composables/useVirtualScroll'
+import { createLogger } from '@/utils/logger'
+
+const logger = createLogger('BlackBoard')
 
 interface Props {
   items: ScrollItemType[]
@@ -39,8 +43,16 @@ interface Emits {
   (e: 'remove-item', id: string): void
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
+
+// Virtual Scrolling統合
+const { 
+  virtualItems, 
+  observeItem, 
+  unobserveItem,
+  getRenderingStats 
+} = useVirtualScroll(toRef(props, 'items'))
 
 const blackboardRef = ref<HTMLElement | null>(null)
 const scrollAreaRef = ref<HTMLElement | null>(null)
@@ -61,6 +73,47 @@ const handleWrapAround = (_id: string): void => {
   // For now, position update will handle it
 }
 
+// Virtual Scrolling: ScrollItemコンポーネントの参照を処理
+const itemRefs = new Map<string, Element>()
+
+// Vue3のテンプレートrefの型定義
+interface ComponentPublicInstance {
+  $el: Element
+}
+
+const handleItemRef = (el: ComponentPublicInstance | Element | null): void => {
+  // nullチェック
+  if (el === null) {
+    return
+  }
+
+  // DOM要素を取得
+  let element: Element | null = null
+  
+  if (el instanceof Element) {
+    // 直接Element型の場合
+    element = el
+  } else if (typeof el === 'object' && '$el' in el && el.$el instanceof Element) {
+    // Vueコンポーネントインスタンスの場合
+    element = el.$el
+  }
+  
+  if (element !== null) {
+    // data-item-idから ID を取得
+    const itemId = element.getAttribute('data-item-id')
+    if (itemId !== null) {
+      // 既存の要素があれば監視解除
+      const existingEl = itemRefs.get(itemId)
+      if (existingEl !== undefined) {
+        unobserveItem(existingEl)
+      }
+      // 新しい要素を監視
+      itemRefs.set(itemId, element)
+      observeItem(element)
+    }
+  }
+}
+
 // Handle resize events
 const handleResize = (): void => {
   // Notify children about resize if needed
@@ -69,6 +122,19 @@ const handleResize = (): void => {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize)
+  
+  // デバッグ用: Virtual Scrolling統計を定期出力（開発環境のみ）
+  if (import.meta.env.DEV) {
+    const intervalId = setInterval(() => {
+      const stats = getRenderingStats()
+      logger.debug('VirtualScroll', {
+        rendering: `${String(stats.virtualItems)}/${String(stats.totalItems)}`,
+        reduction: `${String(stats.reductionRate)}%`
+      })
+    }, 10000)
+    
+    onUnmounted(() => { clearInterval(intervalId); })
+  }
 })
 
 onUnmounted(() => {

@@ -3,6 +3,7 @@ import type { ScrollItem } from '@/types/scroll-item'
 import { type PositionService } from '@/services/PositionService'
 import { useScrollItemsStore } from '@/stores/scrollItems'
 import { calculateBoardSize, SCROLL_CONFIG } from '@/config/scroll.config'
+import { positionPool } from '@/utils/PositionPool'
 
 /**
  * スクロールアニメーションを管理するComposable
@@ -31,7 +32,7 @@ export function useScrollAnimation(
   let lastFpsUpdate = performance.now()
 
   /**
-   * バッチで複数アイテムの位置を更新
+   * バッチで複数アイテムの位置を更新（最適化版）
    * @param items 更新対象のアイテム配列
    * @param deltaTime 前フレームからの経過時間（秒）
    */
@@ -39,34 +40,38 @@ export function useScrollAnimation(
     const batchSize = SCROLL_CONFIG.animation.batchSize
     const maxItems = SCROLL_CONFIG.performance.maxConcurrentAnimations
     const itemsToUpdate = items.slice(0, Math.min(items.length, maxItems))
-
+    
+    // 一時オブジェクトプール使用
+    const tempPos = positionPool.acquire()
+    
     for (let i = 0; i < itemsToUpdate.length; i += batchSize) {
       const batch = itemsToUpdate.slice(i, i + batchSize)
       
       batch.forEach(item => {
-        // 新しい位置を計算（オブジェクト生成を最小化）
+        // オブジェクト生成を完全回避
         const newX = item.position.x - (item.velocity * deltaTime)
-
-        // 画面外判定（簡易版）
         const itemWidth = getItemWidth(item)
         
-        if (positionService?.shouldWrapAround({ x: newX, y: item.position.y }, itemWidth) === true) {
-          // PositionServiceを使用してループ位置を取得
-          const wrapPosition = positionService.getWrapAroundPosition()
-          store.updateItemPosition(item.id, wrapPosition)
+        if (positionService?.shouldWrapAroundDirect(newX, item.position.y, itemWidth) === true) {
+          // PositionServiceを使用してループ位置を取得（直接更新）
+          positionService.getWrapAroundPositionDirect(tempPos)
+          store.updateItemPositionDirect(item.id, tempPos.x, tempPos.y)
         } else if (newX < -itemWidth) {
-          // フォールバック: 画面外に出たら右側に再配置
-          const resetPosition = {
-            x: window.innerWidth + 200 + Math.random() * 200,
-            y: 20 + Math.random() * (window.innerHeight - 170)
-          }
-          store.updateItemPosition(item.id, resetPosition)
+          // フォールバック: 画面外に出たら右側に再配置（直接更新）
+          store.updateItemPositionDirect(
+            item.id,
+            window.innerWidth + 200 + Math.random() * 200,
+            20 + Math.random() * (window.innerHeight - 170)
+          )
         } else {
-          // 通常の位置更新（オブジェクト生成を最小化）
-          store.updateItemPosition(item.id, { x: newX, y: item.position.y })
+          // 通常の位置更新（直接更新）
+          store.updateItemPositionDirect(item.id, newX, item.position.y)
         }
       })
     }
+    
+    // プールに返却
+    positionPool.release(tempPos)
   }
 
   /**

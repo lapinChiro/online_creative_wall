@@ -3,7 +3,9 @@
     ref="itemRef"
     class="scroll-item"
     :class="{ focused: isFocused }"
-    :style="itemStyle"
+    :style="cssVars"
+    :data-item-id="item.id"
+    :data-visible="isVisible"
     @click="handleClick"
   >
     <ImageContent
@@ -37,16 +39,14 @@ const emit = defineEmits<Emits>()
 
 const itemRef = ref<HTMLElement | null>(null)
 const isFocused = ref(false)
+const isVisible = ref(true)
 
-// スタイル計算（位置はストアから直接参照）
-const itemStyle = computed(() => ({
-  position: 'absolute' as const,
-  left: `${String(props.item.position.x)}px`,
-  top: `${String(props.item.position.y)}px`,
-  transform: `rotate(${String(props.item.rotation)}deg)`,
-  zIndex: props.item.zIndex,
-  transition: isFocused.value ? 'transform 0.2s ease' : 'none',
-  cursor: 'pointer' as const
+// CSS Variables使用（文字列変換最小化）
+const cssVars = computed(() => ({
+  '--x': props.item.position.x,
+  '--y': props.item.position.y,
+  '--r': props.item.rotation,
+  '--z': props.item.zIndex
 }))
 
 // 位置変更の監視（画面外判定用）
@@ -56,6 +56,10 @@ watch(() => props.item.position.x, (newX) => {
     if (newX < -width) {
       emit('wrap-around', props.item.id)
     }
+    
+    // ビューポート内判定
+    const viewportWidth = window.innerWidth
+    isVisible.value = newX > -width && newX < viewportWidth
   }
 })
 
@@ -75,11 +79,34 @@ const handleClick = (): void => {
 <style scoped>
 .scroll-item {
   position: absolute;
-  will-change: transform, left, top;
+  /* GPU合成レイヤー強制 */
+  will-change: transform;
+  transform: translate3d(
+    calc(var(--x) * 1px), 
+    calc(var(--y) * 1px), 
+    0
+  ) rotate(calc(var(--r) * 1deg));
+  z-index: var(--z);
+  
+  /* Containment API によるレンダリング最適化 */
+  contain: layout style paint;
+  
+  /* ポインターイベント有効化 */
   pointer-events: auto;
+  
+  /* パフォーマンス最適化 */
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  
 }
 
 .scroll-item:hover {
+  /* GPUフレンドリーなエフェクト */
+  transform: translate3d(
+    calc(var(--x) * 1px), 
+    calc(var(--y) * 1px), 
+    0
+  ) rotate(calc(var(--r) * 1deg)) scale(1.05);
   filter: brightness(1.1);
 }
 
@@ -90,10 +117,18 @@ const handleClick = (): void => {
 
 @keyframes pulse {
   0%, 100% {
-    transform: scale(1);
+    transform: translate3d(
+      calc(var(--x) * 1px), 
+      calc(var(--y) * 1px), 
+      0
+    ) rotate(calc(var(--r) * 1deg)) scale(1);
   }
   50% {
-    transform: scale(1.05);
+    transform: translate3d(
+      calc(var(--x) * 1px), 
+      calc(var(--y) * 1px), 
+      0
+    ) rotate(calc(var(--r) * 1deg)) scale(1.05);
   }
 }
 </style>

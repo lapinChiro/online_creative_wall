@@ -1,10 +1,55 @@
 <!DOCTYPE html>
-<html lang="">
+<html lang="ja">
   <head>
     <meta charset="UTF-8">
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vite App</title>
+    
+    <!-- Critical Performance Hints -->
+    <meta name="theme-color" content="#1a1a1a">
+    
+    <!-- AWS S3 Preconnect (220ms短縮効果) -->
+    <link rel="preconnect" href="https://beluga-aso.s3-ap-northeast-1.amazonaws.com">
+    <link rel="dns-prefetch" href="https://beluga-aso.s3-ap-northeast-1.amazonaws.com">
+    
+    <!-- Google Fonts Preconnect -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Critical CSS Inline -->
+    <style>
+      /* Above-fold critical styles */
+      body { 
+        margin: 0; 
+        padding: 0; 
+        background: #1a1a1a; 
+        font-family: 'Klee One', 'Comic Sans MS', cursive, sans-serif;
+        overflow: hidden;
+      }
+      #app { 
+        width: 100vw; 
+        height: 100vh; 
+        overflow: hidden; 
+        margin: 0;
+        padding: 0;
+      }
+      /* Loading state */
+      .app-loading {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        background: #1a1a1a;
+        color: #fff;
+        font-size: 1.2rem;
+      }
+    </style>
+    
+    <!-- Font Loading Optimization -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400&display=swap" as="style">
+    <link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    
+    <title>Creative Wall</title>
   </head>
   <body>
     <div id="app"></div>

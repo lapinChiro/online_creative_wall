@@ -91,6 +91,18 @@ export class PositionService {
   }
   
   /**
+   * アイテムが画面左端から完全に出たかを判定（直接値版）
+   * @param x X座標
+   * @param _y Y座標（未使用だが互換性のため保持）
+   * @param itemWidth アイテムの幅
+   * @returns 画面外に出た場合true
+   */
+  shouldWrapAroundDirect(x: number, _y: number, itemWidth: number): boolean {
+    // アイテムの右端が画面左端（x=0）より左にある場合
+    return x < -itemWidth
+  }
+  
+  /**
    * ループ時の再配置位置を生成（画面右側の外）
    * @returns 新しい位置座標
    */
@@ -104,6 +116,20 @@ export class PositionService {
     const y = this.generateRandomY()
     
     return { x, y }
+  }
+  
+  /**
+   * ループ時の再配置位置を既存オブジェクトに直接設定
+   * @param target 位置を設定するターゲットオブジェクト
+   */
+  getWrapAroundPositionDirect(target: Position): void {
+    const { offscreenOffset, wrapAroundBuffer } = SCROLL_CONFIG.position
+    
+    // 画面外右側にランダムな位置で再配置
+    target.x = this.boardWidth + offscreenOffset + randomRange(0, wrapAroundBuffer)
+    
+    // Y座標も新たにランダムに設定
+    target.y = this.generateRandomY()
   }
   
   /**
