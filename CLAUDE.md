@@ -43,6 +43,14 @@ Choose the simplest solution that fully addresses the problem. Avoid over-engine
 - **I**: Many specific interfaces over one general
 - **D**: Depend on abstractions, not concretions
 
+### Test-Driven Development (t_wada's TDD)
+
+Follow the RED-GREEN-BLUE cycle for all development:
+
+1. **RED**: Write failing test first
+2. **GREEN**: Write minimal code to pass
+3. **BLUE**: Refactor while keeping tests green
+
 ## 📚 ドキュメント構成
 
 ### [アーキテクチャ](./docs/architecture.md)

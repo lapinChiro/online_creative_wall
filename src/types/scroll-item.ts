@@ -83,3 +83,42 @@ export const isImageItem = (item: ScrollItem): item is ImageScrollItem => {
 export const isTextItem = (item: ScrollItem): item is TextScrollItem => {
   return item.type === 'text'
 }
+
+// 互換性のためのエイリアス（nullチェック付き）
+export const isImageScrollItem = (item: any): item is ImageScrollItem => {
+  return item != null && item.type === 'image'
+}
+
+export const isTextScrollItem = (item: any): item is TextScrollItem => {
+  return item != null && item.type === 'text'
+}
+export const isScrollItem = (item: unknown): item is ScrollItem => {
+  if (!item || typeof item !== 'object') {
+    return false
+  }
+  const obj = item as any
+  
+  // Check for required fields
+  if (!obj.type || !obj.id || !obj.position) {
+    return false
+  }
+  
+  // Check type validity
+  const hasValidType = obj.type === 'image' || obj.type === 'text'
+  if (!hasValidType) {
+    return false
+  }
+  
+  // Check structure validity
+  const hasValidStructure = (
+    typeof obj.id === 'string' &&
+    typeof obj.position === 'object' &&
+    typeof obj.position.x === 'number' &&
+    typeof obj.position.y === 'number' &&
+    typeof obj.velocity === 'number' &&
+    typeof obj.zIndex === 'number' &&
+    typeof obj.rotation === 'number'
+  )
+  
+  return hasValidStructure
+}

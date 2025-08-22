@@ -13,6 +13,8 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
   const globalVelocity = ref(100) // グローバル速度（パーセント）
   const itemCount = ref(20) // 表示するアイテム数
   const showTexts = ref(true) // テキストアイテムの表示/非表示
+  const boardWidth = ref(0) // ボードの幅
+  const boardHeight = ref(0) // ボードの高さ
   
   // Getters
   const imageItems = computed(() => 
@@ -22,6 +24,9 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
   const textItems = computed(() => 
     items.value.filter(isTextItem) as TextScrollItem[]
   )
+  
+  // 互換性のためのエイリアス
+  const speedMultiplier = computed(() => globalVelocity.value / 100)
   
   const visibleItems = computed(() => {
     const result = showTexts.value 
@@ -123,6 +128,36 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
   }
   
   /**
+   * スピード倍率を設定（互換性のため）
+   * @param multiplier 倍率
+   */
+  function setSpeedMultiplier(multiplier: number) {
+    globalVelocity.value = multiplier * 100
+  }
+  
+  /**
+   * ボードのサイズを設定
+   * @param width 幅
+   * @param height 高さ
+   */
+  function setBoardDimensions(width: number, height: number) {
+    boardWidth.value = width
+    boardHeight.value = height
+  }
+  
+  /**
+   * アイテムを更新（汎用）
+   * @param id アイテムID
+   * @param updates 更新内容
+   */
+  function updateItem(id: string, updates: Partial<ScrollItem>) {
+    const item = items.value.find(item => item.id === id)
+    if (item) {
+      Object.assign(item, updates)
+    }
+  }
+  
+  /**
    * 表示アイテム数を更新
    * @param count 新しいアイテム数
    */
@@ -209,6 +244,8 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     globalVelocity.value = 50
     itemCount.value = 20
     showTexts.value = true
+    boardWidth.value = 0
+    boardHeight.value = 0
   }
   
   return {
@@ -217,6 +254,8 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     globalVelocity,
     itemCount,
     showTexts,
+    boardWidth,
+    boardHeight,
     
     // Getters
     imageItems,
@@ -224,16 +263,20 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     visibleItems,
     itemsCount,
     sortedByZIndex,
+    speedMultiplier,
     
     // Actions
     addItem,
     addItems,
     removeItem,
     removeItems,
+    updateItem,
     updateItemPosition,
     updateItemVelocity,
     updateItemZIndex,
     updateGlobalVelocity,
+    setSpeedMultiplier,
+    setBoardDimensions,
     updateItemCount,
     toggleTexts,
     setShowTexts,

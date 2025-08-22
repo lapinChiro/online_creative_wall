@@ -8,6 +8,9 @@ export const randomRange = (min: number, max: number): number => {
   return min + Math.random() * (max - min)
 }
 
+// エイリアス
+export const randomFloat = randomRange
+
 /**
  * 指定範囲内のランダムな整数を生成
  * @param min 最小値（含む）
@@ -15,6 +18,10 @@ export const randomRange = (min: number, max: number): number => {
  * @returns min以上max以下のランダムな整数
  */
 export const randomInt = (min: number, max: number): number => {
+  // minとmaxが逆の場合は入れ替える
+  if (min > max) {
+    [min, max] = [max, min]
+  }
   return Math.floor(randomRange(min, max + 1))
 }
 
@@ -28,6 +35,27 @@ export const randomChoice = <T>(array: readonly T[]): T => {
     throw new Error('Cannot choose from empty array')
   }
   return array[randomInt(0, array.length - 1)]
+}
+
+// エイリアス
+export const randomElement = <T>(array: readonly T[]): T | undefined => {
+  if (array.length === 0) {
+    return undefined
+  }
+  return array[randomInt(0, array.length - 1)]
+}
+
+/**
+ * 配列をシャッフル（Fisher-Yates algorithm）
+ * @param array シャッフルする配列
+ * @returns シャッフルされた配列（破壊的変更）
+ */
+export const shuffleArray = <T>(array: T[]): T[] => {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = randomInt(0, i)
+    ;[array[i], array[j]] = [array[j], array[i]]
+  }
+  return array
 }
 
 /**
