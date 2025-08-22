@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { randomInt, randomFloat, randomElement, shuffleArray } from '../random'
+import { randomInt, randomChoice, randomRange } from '../random'
 
 describe('Random Utilities', () => {
   describe('randomInt', () => {
@@ -31,89 +31,50 @@ describe('Random Utilities', () => {
     })
   })
 
-  describe('randomFloat', () => {
+  describe('randomRange', () => {
     it('should return float within range', () => {
       const min = 0.1
       const max = 1.0
       for (let i = 0; i < 100; i++) {
-        const result = randomFloat(min, max)
+        const result = randomRange(min, max)
         expect(result).toBeGreaterThanOrEqual(min)
         expect(result).toBeLessThanOrEqual(max)
       }
     })
 
     it('should return min when min equals max', () => {
-      expect(randomFloat(0.5, 0.5)).toBe(0.5)
+      expect(randomRange(0.5, 0.5)).toBe(0.5)
     })
 
     it('should handle negative numbers', () => {
-      const result = randomFloat(-1.5, -0.5)
+      const result = randomRange(-1.5, -0.5)
       expect(result).toBeGreaterThanOrEqual(-1.5)
       expect(result).toBeLessThanOrEqual(-0.5)
     })
   })
 
-  describe('randomElement', () => {
+  describe('randomChoice', () => {
     it('should return element from array', () => {
       const array = ['a', 'b', 'c', 'd', 'e']
       for (let i = 0; i < 50; i++) {
-        const result = randomElement(array)
+        const result = randomChoice(array)
         expect(array).toContain(result)
       }
     })
 
-    it('should return undefined for empty array', () => {
+    it('should throw error for empty array', () => {
       const emptyArray: string[] = []
-      const result = randomElement(emptyArray)
-      expect(result).toBeUndefined()
+      expect(() => randomChoice(emptyArray)).toThrow('Cannot choose from empty array')
     })
 
     it('should return single element for array with one item', () => {
-      expect(randomElement(['only'])).toBe('only')
+      expect(randomChoice(['only'])).toBe('only')
     })
 
     it('should work with different types', () => {
       const numbers = [1, 2, 3, 4, 5]
-      const result = randomElement(numbers)
+      const result = randomChoice(numbers)
       expect(numbers).toContain(result)
-    })
-  })
-
-  describe('shuffleArray', () => {
-    it('should return array with same elements', () => {
-      const original = [1, 2, 3, 4, 5]
-      const shuffled = shuffleArray([...original])
-      
-      expect(shuffled).toHaveLength(original.length)
-      expect(shuffled.sort()).toEqual(original.sort())
-    })
-
-    it('should not modify original array', () => {
-      const original = [1, 2, 3, 4, 5]
-      const copy = [...original]
-      shuffleArray(copy)
-      
-      expect(original).toEqual([1, 2, 3, 4, 5])
-    })
-
-    it('should handle empty array', () => {
-      expect(shuffleArray([])).toEqual([])
-    })
-
-    it('should handle single element array', () => {
-      expect(shuffleArray([1])).toEqual([1])
-    })
-
-    it('should actually shuffle (statistical test)', () => {
-      const array = [1, 2, 3, 4, 5]
-      const results = new Set<string>()
-      
-      for (let i = 0; i < 100; i++) {
-        const shuffled = shuffleArray([...array])
-        results.add(JSON.stringify(shuffled))
-      }
-      
-      expect(results.size).toBeGreaterThan(1)
     })
   })
 })

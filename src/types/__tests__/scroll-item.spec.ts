@@ -1,177 +1,81 @@
 import { describe, it, expect } from 'vitest'
 import {
-  isImageScrollItem,
-  isTextScrollItem,
-  isScrollItem,
+  isImageItem,
+  isTextItem,
   type ImageScrollItem,
   type TextScrollItem,
 } from '../scroll-item'
 
 describe('Type Guards', () => {
-  describe('isImageScrollItem', () => {
-    it('should return true for valid ImageScrollItem', () => {
+  describe('isImageItem', () => {
+    it('should return true for ImageScrollItem', () => {
       const item: ImageScrollItem = {
         id: 'img-1',
         type: 'image',
-        position: { x: 100, y: 200 },
-        velocity: -50,
+        position: { x: 10, y: 20 },
+        velocity: 5,
         zIndex: 1,
         rotation: 0,
         content: {
-          url: 'https://example.com/image.jpg',
-          title: 'Test image',
+          url: 'http://example.com/image.jpg',
+          title: 'Test Image',
           size: 'medium',
         },
       }
-      expect(isImageScrollItem(item)).toBe(true)
+      expect(isImageItem(item)).toBe(true)
     })
 
     it('should return false for TextScrollItem', () => {
       const item: TextScrollItem = {
-        id: 'text-1',
+        id: 'txt-1',
         type: 'text',
-        position: { x: 100, y: 200 },
-        velocity: -50,
+        position: { x: 10, y: 20 },
+        velocity: 5,
         zIndex: 1,
         rotation: 0,
         content: {
-          text: 'Hello World',
-          fontSize: 1.5,
+          text: 'Test Text',
           color: 'yellow',
+          fontSize: 1.5,
         },
       }
-      expect(isImageScrollItem(item)).toBe(false)
-    })
-
-    it('should return false for invalid object', () => {
-      const item = {
-        id: 'invalid',
-        type: 'unknown',
-      }
-      expect(isImageScrollItem(item)).toBe(false)
-    })
-
-    it('should return false for null', () => {
-      expect(isImageScrollItem(null)).toBe(false)
-    })
-
-    it('should return false for undefined', () => {
-      expect(isImageScrollItem(undefined)).toBe(false)
+      expect(isImageItem(item)).toBe(false)
     })
   })
 
-  describe('isTextScrollItem', () => {
-    it('should return true for valid TextScrollItem', () => {
+  describe('isTextItem', () => {
+    it('should return true for TextScrollItem', () => {
       const item: TextScrollItem = {
-        id: 'text-1',
+        id: 'txt-1',
         type: 'text',
-        position: { x: 100, y: 200 },
-        velocity: -50,
+        position: { x: 10, y: 20 },
+        velocity: 5,
         zIndex: 1,
         rotation: 0,
         content: {
-          text: 'Test text',
-          fontSize: 1.2,
-          color: 'pink',
+          text: 'Test Text',
+          color: 'yellow',
+          fontSize: 1.5,
         },
       }
-      expect(isTextScrollItem(item)).toBe(true)
+      expect(isTextItem(item)).toBe(true)
     })
 
     it('should return false for ImageScrollItem', () => {
       const item: ImageScrollItem = {
         id: 'img-1',
         type: 'image',
-        position: { x: 100, y: 200 },
-        velocity: -50,
+        position: { x: 10, y: 20 },
+        velocity: 5,
         zIndex: 1,
         rotation: 0,
         content: {
-          url: 'https://example.com/image.jpg',
-          title: 'Test image',
-          size: 'large',
+          url: 'http://example.com/image.jpg',
+          title: 'Test Image',
+          size: 'medium',
         },
       }
-      expect(isTextScrollItem(item)).toBe(false)
-    })
-
-    it('should return false for invalid object', () => {
-      const item = {
-        id: 'invalid',
-        type: 'unknown',
-      }
-      expect(isTextScrollItem(item)).toBe(false)
-    })
-  })
-
-  describe('isScrollItem', () => {
-    it('should return true for ImageScrollItem', () => {
-      const item: ImageScrollItem = {
-        id: 'img-1',
-        type: 'image',
-        position: { x: 100, y: 200 },
-        velocity: -50,
-        zIndex: 1,
-        rotation: 0,
-        content: {
-          url: 'https://example.com/image.jpg',
-          title: 'Test image',
-          size: 'small',
-        },
-      }
-      expect(isScrollItem(item)).toBe(true)
-    })
-
-    it('should return true for TextScrollItem', () => {
-      const item: TextScrollItem = {
-        id: 'text-1',
-        type: 'text',
-        position: { x: 100, y: 200 },
-        velocity: -50,
-        zIndex: 1,
-        rotation: 0,
-        content: {
-          text: 'Test text',
-          fontSize: 1.8,
-          color: 'blue',
-        },
-      }
-      expect(isScrollItem(item)).toBe(true)
-    })
-
-    it('should return false for invalid type', () => {
-      const item = {
-        id: 'invalid',
-        type: 'unknown',
-        position: { x: 100, y: 200 },
-        velocity: -50,
-        zIndex: 1,
-        rotation: 0,
-        content: {},
-      }
-      expect(isScrollItem(item)).toBe(false)
-    })
-
-    it('should return false for missing required fields', () => {
-      const item = {
-        id: 'invalid',
-        type: 'image',
-      }
-      expect(isScrollItem(item)).toBe(false)
-    })
-
-    it('should return false for null', () => {
-      expect(isScrollItem(null)).toBe(false)
-    })
-
-    it('should return false for undefined', () => {
-      expect(isScrollItem(undefined)).toBe(false)
-    })
-
-    it('should return false for primitive values', () => {
-      expect(isScrollItem('string')).toBe(false)
-      expect(isScrollItem(123)).toBe(false)
-      expect(isScrollItem(true)).toBe(false)
+      expect(isTextItem(item)).toBe(false)
     })
   })
 })

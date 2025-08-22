@@ -70,15 +70,6 @@ const handleClick = (): void => {
   }, 300)
 }
 
-// 要素の幅を取得（外部から参照可能）
-const getWidth = (): number => {
-  return itemRef.value?.offsetWidth ?? 0
-}
-
-// パブリックメソッドの公開
-defineExpose({
-  getWidth
-})
 </script>
 
 <style scoped>

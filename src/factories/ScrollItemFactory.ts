@@ -95,39 +95,6 @@ export class ScrollItemFactory {
     })
   }
   
-  /**
-   * 画像データの配列から一括生成
-   * @param imageDataList 画像データの配列
-   * @param startIndex 開始インデックス
-   * @param baseVelocity 基準速度
-   * @returns 画像スクロールアイテムの配列
-   */
-  createImageBatch(
-    imageDataList: Array<{ url: string; title?: string }>,
-    startIndex: number,
-    baseVelocity: number
-  ): ImageScrollItem[] {
-    return imageDataList.map((data, i) => 
-      this.createImageItem(data, startIndex + i, baseVelocity)
-    )
-  }
-  
-  /**
-   * テキストの配列から一括生成
-   * @param textList テキストの配列
-   * @param startIndex 開始インデックス
-   * @param baseVelocity 基準速度
-   * @returns テキストスクロールアイテムの配列
-   */
-  createTextBatch(
-    textList: string[],
-    startIndex: number,
-    baseVelocity: number
-  ): TextScrollItem[] {
-    return textList.map((text, i) => 
-      this.createTextItem(text, startIndex + i, baseVelocity)
-    )
-  }
   
   /**
    * アイテムIDを生成

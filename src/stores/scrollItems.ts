@@ -10,6 +10,7 @@ import { isImageItem, isTextItem } from '@/types/scroll-item'
 export const useScrollItemsStore = defineStore('scrollItems', () => {
   // State
   const items = ref<ScrollItem[]>([])
+  const itemsMap = ref<Map<string, ScrollItem>>(new Map()) // 高速ルックアップ用Map
   const globalVelocity = ref(100) // グローバル速度（パーセント）
   const itemCount = ref(20) // 表示するアイテム数
   const showTexts = ref(true) // テキストアイテムの表示/非表示
@@ -42,9 +43,6 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     texts: textItems.value.length
   }))
   
-  const sortedByZIndex = computed(() => 
-    [...items.value].sort((a, b) => a.zIndex - b.zIndex)
-  )
   
   // Actions
   /**
@@ -53,6 +51,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    */
   function addItem(item: ScrollItem): void {
     items.value.push(item)
+    itemsMap.value.set(item.id, item)
   }
   
   /**
@@ -61,6 +60,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    */
   function addItems(newItems: ScrollItem[]): void {
     items.value.push(...newItems)
+    newItems.forEach(item => itemsMap.value.set(item.id, item))
   }
   
   /**
@@ -71,6 +71,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     const index = items.value.findIndex(item => item.id === id)
     if (index !== -1) {
       items.value.splice(index, 1)
+      itemsMap.value.delete(id)
     }
   }
   
@@ -81,6 +82,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
   function removeItems(ids: string[]): void {
     const idSet = new Set(ids)
     items.value = items.value.filter(item => !idSet.has(item.id))
+    ids.forEach(id => itemsMap.value.delete(id))
   }
   
   /**
@@ -89,7 +91,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * @param position 新しい位置
    */
   function updateItemPosition(id: string, position: { x: number; y: number }): void {
-    const item = items.value.find(item => item.id === id)
+    const item = itemsMap.value.get(id)
     if (item !== undefined) {
       item.position = position
     }
@@ -101,7 +103,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * @param velocity 新しい速度
    */
   function updateItemVelocity(id: string, velocity: number): void {
-    const item = items.value.find(item => item.id === id)
+    const item = itemsMap.value.get(id)
     if (item !== undefined) {
       item.velocity = velocity
     }
@@ -113,7 +115,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * @param zIndex 新しいz-index
    */
   function updateItemZIndex(id: string, zIndex: number): void {
-    const item = items.value.find(item => item.id === id)
+    const item = itemsMap.value.get(id)
     if (item !== undefined) {
       item.zIndex = zIndex
     }
@@ -151,7 +153,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * @param updates 更新内容
    */
   function updateItem(id: string, updates: Partial<ScrollItem>): void {
-    const item = items.value.find(item => item.id === id)
+    const item = itemsMap.value.get(id)
     if (item !== undefined) {
       Object.assign(item, updates)
     }
@@ -185,6 +187,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    */
   function clearItems(): void {
     items.value = []
+    itemsMap.value.clear()
   }
   
   /**
@@ -193,16 +196,19 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    */
   function setItems(newItems: ScrollItem[]): void {
     items.value = newItems
+    itemsMap.value.clear()
+    newItems.forEach(item => itemsMap.value.set(item.id, item))
   }
   
   /**
-   * アイテムを最前面に移動
+   * アイテムを最前面に移動（パフォーマンス最適化済）
    * @param id アイテムID
    */
   function bringToFront(id: string): void {
-    const item = items.value.find(item => item.id === id)
+    const item = itemsMap.value.get(id)
     if (item !== undefined) {
-      const maxZ = Math.max(...items.value.map(i => i.zIndex))
+      // 線形検索ではなくreduceで最大値を求める
+      const maxZ = items.value.reduce((max, current) => Math.max(max, current.zIndex), 0)
       item.zIndex = maxZ + 1
     }
   }
@@ -213,7 +219,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * @returns アイテム（存在しない場合はundefined）
    */
   function getItemById(id: string): ScrollItem | undefined {
-    return items.value.find(item => item.id === id)
+    return itemsMap.value.get(id)
   }
   
   /**
@@ -229,12 +235,10 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * すべてのアイテムの速度を更新
    * @param velocityService VelocityServiceインスタンス
    */
-  interface VelocityService {
+  function updateAllVelocities(velocityService: {
     getDefaultVelocity(): number
     calculateItemVelocity(baseVelocity: number, type: string): number
-  }
-  
-  function updateAllVelocities(velocityService: VelocityService): void {
+  }): void {
     const baseVelocity = velocityService.getDefaultVelocity()
     items.value.forEach(item => {
       item.velocity = velocityService.calculateItemVelocity(baseVelocity, item.type)
@@ -246,6 +250,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    */
   function $reset(): void {
     items.value = []
+    itemsMap.value.clear()
     globalVelocity.value = 50
     itemCount.value = 20
     showTexts.value = true
@@ -267,7 +272,6 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     textItems,
     visibleItems,
     itemsCount,
-    sortedByZIndex,
     speedMultiplier,
     
     // Actions

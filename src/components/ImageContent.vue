@@ -1,7 +1,8 @@
 <template>
   <div
     class="image-content"
-    :class="[sizeClass, statusClass]"
+    :class="[statusClass]"
+    :style="dynamicSizeStyle"
   >
     <div
       v-if="isLoading"
@@ -30,6 +31,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { ImageContent } from '@/types/scroll-item'
+import { SCROLL_CONFIG } from '@/config/scroll.config'
 
 interface Props {
   content: ImageContent
@@ -41,12 +43,19 @@ const isLoading = ref(true)
 const isLoaded = ref(false)
 const hasError = ref(false)
 
-const sizeClass = computed(() => `size-${props.content.size}`)
 const statusClass = computed(() => {
   if (hasError.value) {return 'error'}
   if (isLoaded.value) {return 'loaded'}
   if (isLoading.value) {return 'loading'}
   return ''
+})
+
+const dynamicSizeStyle = computed(() => {
+  const size = SCROLL_CONFIG.sizes.image[props.content.size]
+  return {
+    width: `${String(size.width)}px`,
+    height: `${String(size.height)}px`
+  }
 })
 
 const handleImageLoad = (): void => {
@@ -115,31 +124,12 @@ const handleImageError = (): void => {
   color: rgba(255, 255, 255, 0.5);
 }
 
-/* サイズクラス */
-.size-small {
-  width: 100px;
-  height: 100px;
-}
-
-.size-medium {
-  width: 120px;
-  height: 120px;
-}
-
-.size-large {
-  width: 150px;
-  height: 150px;
-}
-
-.size-xlarge {
-  width: 180px;
-  height: 180px;
-}
+/* サイズはdynamicSizeStyleで動的設定されるため、CSS定義不要 */
 
 /* ホバーエフェクト */
 .image-content:hover {
   transform: scale(1.05);
-  z-index: 100;
+  z-index: 100; /* TODO: SCROLL_CONFIG.layout.hoverZIndex 使用検討 */
 }
 
 .image-content.loaded {

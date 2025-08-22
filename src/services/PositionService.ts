@@ -55,9 +55,7 @@ export class PositionService {
     }
     
     // Y座標は画面内でランダムに配置
-    const minY = SCROLL_CONFIG.position.minY
-    const maxY = this.boardHeight - SCROLL_CONFIG.position.bottomMargin
-    const y = randomRange(minY, maxY)
+    const y = this.generateRandomY()
     
     return { x, y }
   }
@@ -103,9 +101,7 @@ export class PositionService {
     const x = this.boardWidth + offscreenOffset + randomRange(0, wrapAroundBuffer)
     
     // Y座標も新たにランダムに設定
-    const minY = SCROLL_CONFIG.position.minY
-    const maxY = this.boardHeight - SCROLL_CONFIG.position.bottomMargin
-    const y = randomRange(minY, maxY)
+    const y = this.generateRandomY()
     
     return { x, y }
   }
@@ -145,6 +141,16 @@ export class PositionService {
       position.y + itemHeight > 0 && position.y < this.boardHeight
       
     return inHorizontalRange && inVerticalRange
+  }
+  
+  /**
+   * Y座標をランダムに生成
+   * @returns ランダムY座標
+   */
+  private generateRandomY(): number {
+    const minY = SCROLL_CONFIG.position.minY
+    const maxY = this.boardHeight - SCROLL_CONFIG.position.bottomMargin
+    return randomRange(minY, maxY)
   }
   
   /**

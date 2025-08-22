@@ -108,10 +108,10 @@ export class ContentFactory {
   /**
    * テキストを適切な長さに切り詰める
    * @param text 元のテキスト
-   * @param maxLength 最大文字数
+   * @param maxLength 最大文字数（デフォルトはSCROLL_CONFIGから）
    * @returns 切り詰められたテキスト
    */
-  private truncateText(text: string, maxLength: number = 30): string {
+  private truncateText(text: string, maxLength: number = SCROLL_CONFIG.layout.maxTextLength): string {
     if (text.length <= maxLength) {
       return text
     }

@@ -11,6 +11,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { TextContent } from '@/types/scroll-item'
+import { SCROLL_CONFIG } from '@/config/scroll.config'
 
 interface Props {
   content: TextContent
@@ -19,12 +20,12 @@ interface Props {
 const props = defineProps<Props>()
 
 const displayText = computed(() => {
-  // テキストが長すぎる場合は切り詰める
-  const maxLength = 30
-  if (props.content.text.length > maxLength) {
-    return props.content.text.substring(0, maxLength) + '...'
+  // SCROLL_CONFIG から最大長を取得（ContentFactory.truncateText と統一）
+  const maxLength = SCROLL_CONFIG.layout.maxTextLength
+  if (props.content.text.length <= maxLength) {
+    return props.content.text
   }
-  return props.content.text
+  return props.content.text.substring(0, maxLength) + '...'
 })
 
 const textStyle = computed(() => ({
@@ -121,7 +122,7 @@ const textStyle = computed(() => ({
 .text-content:hover {
   transform: scale(1.1);
   filter: brightness(1.2);
-  z-index: 100;
+  z-index: 100; /* TODO: SCROLL_CONFIG.layout.hoverZIndex 使用検討 */
 }
 
 /* アニメーション */

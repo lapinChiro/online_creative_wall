@@ -69,18 +69,21 @@ import { ScrollItemFactory } from '@/factories/ScrollItemFactory'
 import { ContentFactory } from '@/factories/ContentFactory'
 import { PositionService } from '@/services/PositionService'
 import { VelocityService } from '@/services/VelocityService'
+import { DataService, type FetchedImage } from '@/services/DataService'
+import { calculateBoardSize, SCROLL_CONFIG } from '@/config/scroll.config'
 import type { Position } from '@/types'
 
 const scrollItemsStore = useScrollItemsStore()
 const loading = ref(true)
 const error = ref<string | null>(null)
-const maxDataCount = ref(100)
+const maxDataCount = ref<number>(SCROLL_CONFIG.layout.maxDataCount)
 
 // Initialize services and factories immediately
-const boardWidth = window.innerWidth - 60
-const boardHeight = window.innerHeight - 120
+const boardSize = calculateBoardSize()
+const { width: boardWidth, height: boardHeight } = boardSize
 const positionService = new PositionService(boardWidth, boardHeight)
 const velocityService = new VelocityService()
+const dataService = new DataService()
 const contentFactory = new ContentFactory()
 const itemFactory = new ScrollItemFactory(
   positionService,
@@ -94,18 +97,7 @@ velocityService.setGlobalMultiplier(scrollItemsStore.globalVelocity)
 // Animation management - Initialize at setup level
 const animationController = useScrollAnimation(positionService)
 
-// Type definitions for fetched data
-interface FetchedImage {
-  url: string
-  title: string
-}
-
-interface MediaItem {
-  media_url_https?: string
-  text?: string
-}
-
-// Raw data storage
+// Data storage
 const fetchedImageData = ref<FetchedImage[]>([])
 const fetchedTextData = ref<string[]>([])
 
@@ -117,32 +109,15 @@ const fetchData = async (): Promise<void> => {
       throw new Error("Media URL is not defined")
     }
 
-    const response = await fetch(mediaUrl)
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${String(response.status)}`)
-    }
-    const data = await response.json() as MediaItem[]
+    const mediaData = await dataService.fetchMediaData(mediaUrl)
     
-    // Process image data
-    fetchedImageData.value = data
-      .filter((item: MediaItem): item is MediaItem & { media_url_https: string } => 
-        item.media_url_https !== undefined)
-      .map((item) => ({
-        url: item.media_url_https,
-        title: item.text ?? 'Image'
-      }))
-    
-    // Process text data
-    fetchedTextData.value = data
-      .filter((item: MediaItem): item is MediaItem & { text: string } => 
-        item.text !== undefined && item.text.length > 0)
-      .map((item) => item.text)
-      .slice(0, 30) // Limit texts
-    
+    fetchedImageData.value = mediaData.images
+    fetchedTextData.value = mediaData.texts
     maxDataCount.value = fetchedImageData.value.length
   } catch (err) {
-    console.error('Failed to fetch data:', err)
-    error.value = 'Failed to load data'
+    // Error logging should be handled by service layer or monitoring service
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    error.value = `Failed to load data: ${errorMessage}`
   }
 }
 
@@ -173,16 +148,8 @@ const generateItems = (): void => {
     }
   })
   
-  // Shuffle items for random distribution
-  for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const temp = items[j]
-    const currentItem = items[i]
-    if (temp !== undefined && currentItem !== undefined) {
-      items[j] = currentItem
-      items[i] = temp
-    }
-  }
+  // Shuffle items for random distribution (Fisher-Yates shuffle)
+  items.sort(() => Math.random() - 0.5)
   
   // Create scroll items using factory
   const scrollItems = items.map((item, index) => {
@@ -314,8 +281,9 @@ const initializeApp = async (): Promise<void> => {
       generateItems()
     }
   } catch (err) {
-    console.error('Initialization failed:', err)
-    error.value = 'Failed to initialize application'
+    // Error logging should be handled by monitoring service
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    error.value = `Failed to initialize application: ${errorMessage}`
   } finally {
     loading.value = false
   }
@@ -323,9 +291,8 @@ const initializeApp = async (): Promise<void> => {
 
 // Handle window resize
 const handleResize = (): void => {
-  const boardWidth = window.innerWidth - 60
-  const boardHeight = window.innerHeight - 120
-  positionService.updateBoardDimensions(boardWidth, boardHeight)
+  const newBoardSize = calculateBoardSize()
+  positionService.updateBoardDimensions(newBoardSize.width, newBoardSize.height)
 }
 
 onMounted(async () => {

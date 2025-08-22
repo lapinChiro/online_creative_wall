@@ -353,29 +353,6 @@ describe('ScrollItems Store', () => {
       })
     })
 
-    describe('sortedByZIndex', () => {
-      it('should sort items by z-index', () => {
-        const store = useScrollItemsStore()
-        
-        const item1 = createImageItem('img-1')
-        item1.zIndex = 3
-        
-        const item2 = createTextItem('text-1')
-        item2.zIndex = 1
-        
-        const item3 = createImageItem('img-2')
-        item3.zIndex = 2
-        
-        store.addItem(item1)
-        store.addItem(item2)
-        store.addItem(item3)
-        
-        const sorted = store.sortedByZIndex
-        expect(sorted[0]?.zIndex).toBe(1)
-        expect(sorted[1]?.zIndex).toBe(2)
-        expect(sorted[2]?.zIndex).toBe(3)
-      })
-    })
 
     describe('itemsCount', () => {
       it('should return counts by type', () => {

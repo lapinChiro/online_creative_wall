@@ -1,7 +1,8 @@
-import { ref, onMounted, onUnmounted, type Ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import type { ScrollItem } from '@/types/scroll-item'
 import { type PositionService } from '@/services/PositionService'
 import { useScrollItemsStore } from '@/stores/scrollItems'
+import { calculateBoardSize, SCROLL_CONFIG } from '@/config/scroll.config'
 
 /**
  * スクロールアニメーションを管理するComposable
@@ -35,21 +36,21 @@ export function useScrollAnimation(
    * @param deltaTime 前フレームからの経過時間（秒）
    */
   const updateItemPositions = (items: ScrollItem[], deltaTime: number): void => {
-    const batchSize = 10 // バッチ処理のサイズ
-    const itemsToUpdate = items.slice(0, Math.min(items.length, 100)) // 最大100アイテムまで処理
+    const batchSize = SCROLL_CONFIG.animation.batchSize
+    const maxItems = SCROLL_CONFIG.performance.maxConcurrentAnimations
+    const itemsToUpdate = items.slice(0, Math.min(items.length, maxItems))
 
     for (let i = 0; i < itemsToUpdate.length; i += batchSize) {
       const batch = itemsToUpdate.slice(i, i + batchSize)
       
       batch.forEach(item => {
-        // 新しい位置を計算
+        // 新しい位置を計算（オブジェクト生成を最小化）
         const newX = item.position.x - (item.velocity * deltaTime)
-        const newPosition = { ...item.position, x: newX }
 
         // 画面外判定（簡易版）
         const itemWidth = getItemWidth(item)
         
-        if (positionService?.shouldWrapAround(newPosition, itemWidth) === true) {
+        if (positionService?.shouldWrapAround({ x: newX, y: item.position.y }, itemWidth) === true) {
           // PositionServiceを使用してループ位置を取得
           const wrapPosition = positionService.getWrapAroundPosition()
           store.updateItemPosition(item.id, wrapPosition)
@@ -61,8 +62,8 @@ export function useScrollAnimation(
           }
           store.updateItemPosition(item.id, resetPosition)
         } else {
-          // 通常の位置更新
-          store.updateItemPosition(item.id, newPosition)
+          // 通常の位置更新（オブジェクト生成を最小化）
+          store.updateItemPosition(item.id, { x: newX, y: item.position.y })
         }
       })
     }
@@ -75,17 +76,11 @@ export function useScrollAnimation(
    */
   const getItemWidth = (item: ScrollItem): number => {
     if (item.type === 'image') {
-      // 画像サイズに基づいて推定
-      const sizeMap = {
-        small: 100,
-        medium: 120,
-        large: 150,
-        xlarge: 180
-      }
-      return sizeMap[item.content.size]
+      // SCROLL_CONFIG からサイズを取得
+      return SCROLL_CONFIG.sizes.image[item.content.size].width
     } else {
-      // テキストの場合は固定値
-      return 200
+      // テキストの場合は推定値（フォントサイズ × 文字数基準）
+      return Math.min(item.content.text.length * item.content.fontSize * 12, 300)
     }
   }
 
@@ -177,9 +172,8 @@ export function useScrollAnimation(
    */
   const handleResize = (): void => {
     if (positionService !== null) {
-      const width = window.innerWidth - 60
-      const height = window.innerHeight - 120
-      positionService.updateBoardDimensions(width, height)
+      const newBoardSize = calculateBoardSize()
+      positionService.updateBoardDimensions(newBoardSize.width, newBoardSize.height)
     }
   }
 
@@ -194,131 +188,3 @@ export function useScrollAnimation(
   }
 }
 
-/**
- * グローバルアニメーションマネージャー
- * アプリケーション全体で単一のアニメーションループを管理
- */
-export class GlobalAnimationManager {
-  private static instance: GlobalAnimationManager | null = null
-  private animationFrameId: number | null = null
-  private subscribers: Set<(deltaTime: number) => void> = new Set()
-  private isRunning = false
-  private lastTime = performance.now()
-
-  private constructor() {}
-
-  static getInstance(): GlobalAnimationManager {
-    if (GlobalAnimationManager.instance === null) {
-      GlobalAnimationManager.instance = new GlobalAnimationManager()
-    }
-    return GlobalAnimationManager.instance
-  }
-
-  /**
-   * アニメーションループにサブスクライブ
-   */
-  subscribe(callback: (deltaTime: number) => void): () => void {
-    this.subscribers.add(callback)
-    
-    // 初回サブスクライバーの場合、アニメーションを開始
-    if (this.subscribers.size === 1 && !this.isRunning) {
-      this.start()
-    }
-
-    // アンサブスクライブ関数を返す
-    return () => {
-      this.subscribers.delete(callback)
-      
-      // サブスクライバーがいなくなったら停止
-      if (this.subscribers.size === 0) {
-        this.stop()
-      }
-    }
-  }
-
-  private animate = (currentTime: number): void => {
-    if (!this.isRunning) {return}
-
-    const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1)
-    this.lastTime = currentTime
-
-    // すべてのサブスクライバーに通知
-    this.subscribers.forEach(callback => {
-      try {
-        callback(deltaTime)
-      } catch (error) {
-        console.error('Animation callback error:', error)
-      }
-    })
-
-    this.animationFrameId = requestAnimationFrame(this.animate)
-  }
-
-  private start(): void {
-    if (!this.isRunning) {
-      this.isRunning = true
-      this.lastTime = performance.now()
-      this.animationFrameId = requestAnimationFrame(this.animate)
-    }
-  }
-
-  private stop(): void {
-    if (this.isRunning) {
-      this.isRunning = false
-      if (this.animationFrameId !== null) {
-        cancelAnimationFrame(this.animationFrameId)
-        this.animationFrameId = null
-      }
-    }
-  }
-
-  /**
-   * 手動でアニメーションを開始/停止
-   */
-  forceStart(): void {
-    this.start()
-  }
-
-  forceStop(): void {
-    this.stop()
-  }
-
-  getStatus(): { isRunning: boolean; subscriberCount: number } {
-    return {
-      isRunning: this.isRunning,
-      subscriberCount: this.subscribers.size
-    }
-  }
-}
-
-/**
- * グローバルアニメーションマネージャーを使用するComposable
- */
-export function useGlobalAnimation(
-  callback: (deltaTime: number) => void
-): {
-  unsubscribe: () => void
-  manager: GlobalAnimationManager
-} {
-  const manager = GlobalAnimationManager.getInstance()
-  let unsubscribe: (() => void) | null = null
-
-  onMounted(() => {
-    unsubscribe = manager.subscribe(callback)
-  })
-
-  onUnmounted(() => {
-    if (unsubscribe !== null) {
-      unsubscribe()
-    }
-  })
-
-  return {
-    unsubscribe: () => {
-      if (unsubscribe !== null) {
-        unsubscribe()
-      }
-    },
-    manager
-  }
-}
