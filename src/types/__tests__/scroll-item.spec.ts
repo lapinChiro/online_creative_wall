@@ -48,15 +48,15 @@ describe('Type Guards', () => {
         id: 'invalid',
         type: 'unknown',
       }
-      expect(isImageScrollItem(item as any)).toBe(false)
+      expect(isImageScrollItem(item)).toBe(false)
     })
 
     it('should return false for null', () => {
-      expect(isImageScrollItem(null as any)).toBe(false)
+      expect(isImageScrollItem(null)).toBe(false)
     })
 
     it('should return false for undefined', () => {
-      expect(isImageScrollItem(undefined as any)).toBe(false)
+      expect(isImageScrollItem(undefined)).toBe(false)
     })
   })
 
@@ -100,7 +100,7 @@ describe('Type Guards', () => {
         id: 'invalid',
         type: 'unknown',
       }
-      expect(isTextScrollItem(item as any)).toBe(false)
+      expect(isTextScrollItem(item)).toBe(false)
     })
   })
 

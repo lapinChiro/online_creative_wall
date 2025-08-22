@@ -26,7 +26,7 @@ export class PositionService {
    * @returns 生成された位置座標
    */
   generateOffscreenPosition(index: number): Position {
-    const { offscreenOffset, minSpacing, randomSpacing } = SCROLL_CONFIG.position
+    const { minSpacing, randomSpacing } = SCROLL_CONFIG.position
     
     let x: number
     

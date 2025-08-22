@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { ScrollItem, ImageScrollItem, TextScrollItem } from '@/types/scroll-item'
+import type { ScrollItem } from '@/types/scroll-item'
 import { isImageItem, isTextItem } from '@/types/scroll-item'
 
 /**
@@ -18,11 +18,11 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
   
   // Getters
   const imageItems = computed(() => 
-    items.value.filter(isImageItem) as ImageScrollItem[]
+    items.value.filter(isImageItem)
   )
   
   const textItems = computed(() => 
-    items.value.filter(isTextItem) as TextScrollItem[]
+    items.value.filter(isTextItem)
   )
   
   // 互換性のためのエイリアス
@@ -51,7 +51,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * 単一アイテムを追加
    * @param item 追加するアイテム
    */
-  function addItem(item: ScrollItem) {
+  function addItem(item: ScrollItem): void {
     items.value.push(item)
   }
   
@@ -59,7 +59,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * 複数アイテムを一括追加
    * @param newItems 追加するアイテムの配列
    */
-  function addItems(newItems: ScrollItem[]) {
+  function addItems(newItems: ScrollItem[]): void {
     items.value.push(...newItems)
   }
   
@@ -67,7 +67,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * アイテムを削除
    * @param id 削除するアイテムのID
    */
-  function removeItem(id: string) {
+  function removeItem(id: string): void {
     const index = items.value.findIndex(item => item.id === id)
     if (index !== -1) {
       items.value.splice(index, 1)
@@ -78,7 +78,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * 複数アイテムを一括削除
    * @param ids 削除するアイテムIDの配列
    */
-  function removeItems(ids: string[]) {
+  function removeItems(ids: string[]): void {
     const idSet = new Set(ids)
     items.value = items.value.filter(item => !idSet.has(item.id))
   }
@@ -88,7 +88,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * @param id アイテムID
    * @param position 新しい位置
    */
-  function updateItemPosition(id: string, position: { x: number; y: number }) {
+  function updateItemPosition(id: string, position: { x: number; y: number }): void {
     const item = items.value.find(item => item.id === id)
     if (item) {
       item.position = position
@@ -100,7 +100,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * @param id アイテムID
    * @param velocity 新しい速度
    */
-  function updateItemVelocity(id: string, velocity: number) {
+  function updateItemVelocity(id: string, velocity: number): void {
     const item = items.value.find(item => item.id === id)
     if (item) {
       item.velocity = velocity
@@ -112,7 +112,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * @param id アイテムID
    * @param zIndex 新しいz-index
    */
-  function updateItemZIndex(id: string, zIndex: number) {
+  function updateItemZIndex(id: string, zIndex: number): void {
     const item = items.value.find(item => item.id === id)
     if (item) {
       item.zIndex = zIndex
@@ -123,7 +123,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * グローバル速度を更新
    * @param velocity 新しい速度（パーセント）
    */
-  function updateGlobalVelocity(velocity: number) {
+  function updateGlobalVelocity(velocity: number): void {
     globalVelocity.value = Math.max(10, Math.min(150, velocity))
   }
   
@@ -131,7 +131,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * スピード倍率を設定（互換性のため）
    * @param multiplier 倍率
    */
-  function setSpeedMultiplier(multiplier: number) {
+  function setSpeedMultiplier(multiplier: number): void {
     globalVelocity.value = multiplier * 100
   }
   
@@ -140,7 +140,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * @param width 幅
    * @param height 高さ
    */
-  function setBoardDimensions(width: number, height: number) {
+  function setBoardDimensions(width: number, height: number): void {
     boardWidth.value = width
     boardHeight.value = height
   }
@@ -150,7 +150,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * @param id アイテムID
    * @param updates 更新内容
    */
-  function updateItem(id: string, updates: Partial<ScrollItem>) {
+  function updateItem(id: string, updates: Partial<ScrollItem>): void {
     const item = items.value.find(item => item.id === id)
     if (item) {
       Object.assign(item, updates)
@@ -161,14 +161,14 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * 表示アイテム数を更新
    * @param count 新しいアイテム数
    */
-  function updateItemCount(count: number) {
+  function updateItemCount(count: number): void {
     itemCount.value = Math.max(1, count)
   }
   
   /**
    * テキスト表示を切り替え
    */
-  function toggleTexts() {
+  function toggleTexts(): void {
     showTexts.value = !showTexts.value
   }
   
@@ -176,14 +176,14 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * テキスト表示状態を設定
    * @param show 表示するかどうか
    */
-  function setShowTexts(show: boolean) {
+  function setShowTexts(show: boolean): void {
     showTexts.value = show
   }
   
   /**
    * すべてのアイテムをクリア
    */
-  function clearItems() {
+  function clearItems(): void {
     items.value = []
   }
   
@@ -191,7 +191,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * すべてのアイテムを置き換え
    * @param newItems 新しいアイテムの配列
    */
-  function setItems(newItems: ScrollItem[]) {
+  function setItems(newItems: ScrollItem[]): void {
     items.value = newItems
   }
   
@@ -199,7 +199,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * アイテムを最前面に移動
    * @param id アイテムID
    */
-  function bringToFront(id: string) {
+  function bringToFront(id: string): void {
     const item = items.value.find(item => item.id === id)
     if (item) {
       const maxZ = Math.max(...items.value.map(i => i.zIndex))
@@ -229,7 +229,12 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * すべてのアイテムの速度を更新
    * @param velocityService VelocityServiceインスタンス
    */
-  function updateAllVelocities(velocityService: any) {
+  interface VelocityService {
+    getDefaultVelocity(): number
+    calculateItemVelocity(baseVelocity: number, type: string): number
+  }
+  
+  function updateAllVelocities(velocityService: VelocityService): void {
     const baseVelocity = velocityService.getDefaultVelocity()
     items.value.forEach(item => {
       item.velocity = velocityService.calculateItemVelocity(baseVelocity, item.type)

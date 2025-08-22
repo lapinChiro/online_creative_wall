@@ -1,7 +1,13 @@
 <template>
-  <div class="image-content" :class="[sizeClass, statusClass]">
-    <div v-if="isLoading" class="loader">
-      <div class="spinner"></div>
+  <div
+    class="image-content"
+    :class="[sizeClass, statusClass]"
+  >
+    <div
+      v-if="isLoading"
+      class="loader"
+    >
+      <div class="spinner" />
     </div>
     <img 
       v-if="!hasError"
@@ -11,8 +17,11 @@
       loading="lazy"
       @load="handleImageLoad"
       @error="handleImageError"
-    />
-    <div v-if="hasError" class="error-placeholder">
+    >
+    <div
+      v-if="hasError"
+      class="error-placeholder"
+    >
       <span>⚠️</span>
     </div>
   </div>
@@ -34,18 +43,18 @@ const hasError = ref(false)
 
 const sizeClass = computed(() => `size-${props.content.size}`)
 const statusClass = computed(() => {
-  if (hasError.value) return 'error'
-  if (isLoaded.value) return 'loaded'
-  if (isLoading.value) return 'loading'
+  if (hasError.value) {return 'error'}
+  if (isLoaded.value) {return 'loaded'}
+  if (isLoading.value) {return 'loading'}
   return ''
 })
 
-const handleImageLoad = () => {
+const handleImageLoad = (): void => {
   isLoading.value = false
   isLoaded.value = true
 }
 
-const handleImageError = () => {
+const handleImageError = (): void => {
   isLoading.value = false
   hasError.value = true
 }

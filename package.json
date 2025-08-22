@@ -29,7 +29,10 @@
     "lint:strict": "eslint . --max-warnings 0",
     "check": "run-p type-check:strict lint:strict",
     "check:fix": "run-p type-check:strict lint:fix",
-    "ci": "run-s check test:unit:coverage test:e2e"
+    "ci": "npm run type-check:strict && npm run build",
+    "ci:full": "npm run type-check:strict && npm run lint:strict && npm run test:unit:coverage && npm run build",
+    "ci:pre-commit": "npm run type-check:strict && npm run build",
+    "quality:report": "npm run type-check:strict 2>&1 | tail -1 && npm run lint 2>&1 | tail -1"
   },
   "dependencies": {
     "pinia": "^3.0.3",

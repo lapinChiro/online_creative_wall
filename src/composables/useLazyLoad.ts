@@ -31,7 +31,7 @@ export function useLazyLoad(elementRef: Ref<HTMLElement | null>) {
   }
   
   onMounted(() => {
-    if (!elementRef.value) return
+    if (!elementRef.value) {return}
     
     observer = new IntersectionObserver(
       (entries) => {

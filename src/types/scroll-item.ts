@@ -85,39 +85,40 @@ export const isTextItem = (item: ScrollItem): item is TextScrollItem => {
 }
 
 // 互換性のためのエイリアス（nullチェック付き）
-export const isImageScrollItem = (item: any): item is ImageScrollItem => {
-  return item != null && item.type === 'image'
+export const isImageScrollItem = (item: unknown): item is ImageScrollItem => {
+  return item !== null && item !== undefined && (item as ImageScrollItem).type === 'image'
 }
 
-export const isTextScrollItem = (item: any): item is TextScrollItem => {
-  return item != null && item.type === 'text'
+export const isTextScrollItem = (item: unknown): item is TextScrollItem => {
+  return item !== null && item !== undefined && (item as TextScrollItem).type === 'text'
 }
 export const isScrollItem = (item: unknown): item is ScrollItem => {
   if (!item || typeof item !== 'object') {
     return false
   }
-  const obj = item as any
+  const obj = item as Record<string, unknown>
   
   // Check for required fields
-  if (!obj.type || !obj.id || !obj.position) {
+  if (!obj['type'] || !obj['id'] || !obj['position']) {
     return false
   }
   
   // Check type validity
-  const hasValidType = obj.type === 'image' || obj.type === 'text'
+  const hasValidType = obj['type'] === 'image' || obj['type'] === 'text'
   if (!hasValidType) {
     return false
   }
   
   // Check structure validity
   const hasValidStructure = (
-    typeof obj.id === 'string' &&
-    typeof obj.position === 'object' &&
-    typeof obj.position.x === 'number' &&
-    typeof obj.position.y === 'number' &&
-    typeof obj.velocity === 'number' &&
-    typeof obj.zIndex === 'number' &&
-    typeof obj.rotation === 'number'
+    typeof obj['id'] === 'string' &&
+    typeof obj['position'] === 'object' &&
+    obj['position'] !== null &&
+    typeof (obj['position'] as Record<string, unknown>)['x'] === 'number' &&
+    typeof (obj['position'] as Record<string, unknown>)['y'] === 'number' &&
+    typeof obj['velocity'] === 'number' &&
+    typeof obj['zIndex'] === 'number' &&
+    typeof obj['rotation'] === 'number'
   )
   
   return hasValidStructure

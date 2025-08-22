@@ -1,6 +1,9 @@
 <template>
   <div class="app-container">
-    <div class="controls-container" v-if="!loading && !error">
+    <div
+      v-if="!loading && !error"
+      class="controls-container"
+    >
       <button 
         class="toggle-text-btn"
         @click="scrollItemsStore.toggleTexts()"
@@ -11,32 +14,42 @@
         <label for="post-count">投稿数: </label>
         <input 
           id="post-count"
-          type="range" 
-          v-model.number="scrollItemsStore.itemCount"
+          v-model.number="scrollItemsStore.itemCount" 
+          type="range"
           min="5"
           :max="100"
           step="5"
           @change="regenerateItems"
-        />
+        >
         <span class="post-count-display">{{ scrollItemsStore.itemCount }} / {{ maxDataCount }}</span>
       </div>
       <div class="speed-control">
         <label for="scroll-speed">速度: </label>
         <input 
           id="scroll-speed"
-          type="range" 
-          v-model.number="scrollItemsStore.globalVelocity"
+          v-model.number="scrollItemsStore.globalVelocity" 
+          type="range"
           min="10"
           max="150"
           step="10"
           @change="updateGlobalSpeed"
-        />
+        >
         <span class="speed-display">{{ scrollItemsStore.globalVelocity }}%</span>
       </div>
     </div>
     <div class="wall-container">
-      <div v-if="loading" class="loading">Loading images...</div>
-      <div v-else-if="error" class="error">{{ error }}</div>
+      <div
+        v-if="loading"
+        class="loading"
+      >
+        Loading images...
+      </div>
+      <div
+        v-else-if="error"
+        class="error"
+      >
+        {{ error }}
+      </div>
       <BlackBoard
         v-else
         :items="scrollItemsStore.visibleItems"
@@ -77,14 +90,22 @@ const initialPositionService = new PositionService(boardWidth, boardHeight)
 // Animation management - Initialize at setup level
 const animationController = useScrollAnimation(initialPositionService)
 
+// Type definitions for fetched data
+interface FetchedImage {
+  url: string
+  title: string
+}
+
+interface MediaItem {
+  media_url_https?: string
+  text?: string
+}
+
 // Raw data storage
-const fetchedImageData = ref<any[]>([])
+const fetchedImageData = ref<FetchedImage[]>([])
 const fetchedTextData = ref<string[]>([])
 
-const initializeServices = () => {
-  const boardWidth = window.innerWidth - 60
-  const boardHeight = window.innerHeight - 120
-  
+const initializeServices = (): void => {
   // Initialize services
   positionService = initialPositionService // Use the already created instance
   velocityService = new VelocityService()
@@ -99,28 +120,30 @@ const initializeServices = () => {
   velocityService.setGlobalMultiplier(scrollItemsStore.globalVelocity)
 }
 
-const fetchData = async () => {
+const fetchData = async (): Promise<void> => {
   try {
-    const mediaUrl = import.meta.env.VITE_MEDIA_DATA_URL || new Error("Media URL is not defined");
+    const mediaUrl = import.meta.env['VITE_MEDIA_DATA_URL'] || new Error("Media URL is not defined");
 
     const response = await fetch(mediaUrl)
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`HTTP error! status: ${String(response.status)}`)
     }
-    const data = await response.json()
+    const data = await response.json() as MediaItem[]
     
     // Process image data
     fetchedImageData.value = data
-      .filter((item: any) => item.media_url_https)
-      .map((item: any) => ({
+      .filter((item: MediaItem): item is MediaItem & { media_url_https: string } => 
+        item.media_url_https !== undefined && item.media_url_https !== null)
+      .map((item) => ({
         url: item.media_url_https,
-        title: item.text || 'Image'
+        title: item.text ?? 'Image'
       }))
     
     // Process text data
     fetchedTextData.value = data
-      .filter((item: any) => item.text && item.text.length > 0)
-      .map((item: any) => item.text)
+      .filter((item: MediaItem): item is MediaItem & { text: string } => 
+        item.text !== undefined && item.text !== null && item.text.length > 0)
+      .map((item) => item.text)
       .slice(0, 30) // Limit texts
     
     maxDataCount.value = fetchedImageData.value.length
@@ -130,7 +153,7 @@ const fetchData = async () => {
   }
 }
 
-const generateItems = () => {
+const generateItems = (): void => {
   // Check if services are initialized
   if (!itemFactory || !velocityService) {
     console.error('Services not initialized yet')
@@ -165,15 +188,24 @@ const generateItems = () => {
   // Shuffle items for random distribution
   for (let i = items.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]]
+    const temp = items[j]
+    const currentItem = items[i]
+    if (temp !== undefined && currentItem !== undefined) {
+      items[j] = currentItem
+      items[i] = temp
+    }
   }
   
   // Create scroll items using factory
+  if (!itemFactory) {
+    throw new Error('ItemFactory not initialized')
+  }
+  const factory = itemFactory // Store in const for TypeScript
   const scrollItems = items.map((item, index) => {
     if (item.type === 'image') {
-      return itemFactory.createImageItem(item.data, index, baseVelocity)
+      return factory.createImageItem(item.data, index, baseVelocity)
     } else {
-      return itemFactory.createTextItem(item.data, index, baseVelocity)
+      return factory.createTextItem(item.data, index, baseVelocity)
     }
   })
   
@@ -189,15 +221,15 @@ const generateItems = () => {
   }
 }
 
-const handlePositionUpdate = (id: string, position: Position) => {
+const handlePositionUpdate = (id: string, position: Position): void => {
   scrollItemsStore.updateItemPosition(id, position)
 }
 
-const handleItemRemove = (id: string) => {
+const handleItemRemove = (id: string): void => {
   scrollItemsStore.removeItem(id)
 }
 
-const regenerateItems = () => {
+const regenerateItems = (): void => {
   // Smart regeneration - only add/remove items as needed
   if (!itemFactory || !velocityService) {
     console.error('Services not initialized yet')
@@ -244,12 +276,16 @@ const regenerateItems = () => {
     }
     
     // Create scroll items using factory with higher starting index
+    if (!itemFactory) {
+      throw new Error('ItemFactory not initialized')
+    }
+    const factory = itemFactory // Store in const for TypeScript
     const scrollItems = newItems.map((item, index) => {
       const itemIndex = currentItemCount + index
       if (item.type === 'image') {
-        return itemFactory.createImageItem(item.data, itemIndex, baseVelocity)
+        return factory.createImageItem(item.data, itemIndex, baseVelocity)
       } else {
-        return itemFactory.createTextItem(item.data, itemIndex, baseVelocity)
+        return factory.createTextItem(item.data, itemIndex, baseVelocity)
       }
     })
     
@@ -258,11 +294,9 @@ const regenerateItems = () => {
     
   } else if (targetItemCount < currentItemCount) {
     // Need to remove items
-    const itemsToRemove = currentItemCount - targetItemCount
     const currentItems = scrollItemsStore.items
     
     // Remove items from the end (newest items first)
-    const itemsToKeep = currentItems.slice(0, targetItemCount)
     const itemsToDelete = currentItems.slice(targetItemCount)
     
     // Remove excess items
@@ -272,15 +306,19 @@ const regenerateItems = () => {
   // If counts are equal, no changes needed
 }
 
-const updateGlobalSpeed = () => {
+const updateGlobalSpeed = (): void => {
   // Update velocity service with new global speed
+  if (!velocityService) {
+    console.error('VelocityService not initialized')
+    return
+  }
   velocityService.setGlobalMultiplier(scrollItemsStore.globalVelocity)
   
   // Update all existing items' velocities
   scrollItemsStore.updateAllVelocities(velocityService)
 }
 
-const initializeApp = async () => {
+const initializeApp = async (): Promise<void> => {
   loading.value = true
   
   try {
@@ -303,7 +341,7 @@ const initializeApp = async () => {
 }
 
 // Handle window resize
-const handleResize = () => {
+const handleResize = (): void => {
   const boardWidth = window.innerWidth - 60
   const boardHeight = window.innerHeight - 120
   if (positionService) {

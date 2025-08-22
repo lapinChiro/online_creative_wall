@@ -34,7 +34,12 @@ export const randomChoice = <T>(array: readonly T[]): T => {
   if (array.length === 0) {
     throw new Error('Cannot choose from empty array')
   }
-  return array[randomInt(0, array.length - 1)]
+  const index = randomInt(0, array.length - 1)
+  const result = array[index]
+  if (result === undefined) {
+    throw new Error('Unexpected undefined value in array')
+  }
+  return result
 }
 
 // エイリアス
@@ -53,7 +58,12 @@ export const randomElement = <T>(array: readonly T[]): T | undefined => {
 export const shuffleArray = <T>(array: T[]): T[] => {
   for (let i = array.length - 1; i > 0; i--) {
     const j = randomInt(0, i)
-    ;[array[i], array[j]] = [array[j], array[i]]
+    const temp = array[j]
+    const currentItem = array[i]
+    if (temp !== undefined && currentItem !== undefined) {
+      array[j] = currentItem
+      array[i] = temp
+    }
   }
   return array
 }

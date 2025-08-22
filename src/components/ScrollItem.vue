@@ -62,7 +62,7 @@ watch(() => props.item.position.x, (newX) => {
 })
 
 // マウスイベント
-const handleClick = () => {
+const handleClick = (): void => {
   isFocused.value = true
   emit('click', props.item.id)
   

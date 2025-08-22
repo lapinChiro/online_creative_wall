@@ -1,16 +1,21 @@
 <template>
-  <div class="blackboard" ref="blackboardRef">
-    <div class="logo-watermark">🎨 Creative Wall</div>
+  <div
+    ref="blackboardRef"
+    class="blackboard"
+  >
+    <div class="logo-watermark">
+      🎨 Creative Wall
+    </div>
     <div 
-      class="scroll-area" 
-      ref="scrollAreaRef"
+      ref="scrollAreaRef" 
+      class="scroll-area"
     >
       <TransitionGroup name="fade">
         <ScrollItem
           v-for="item in items"
           :key="item.id"
           :item="item"
-          @update-position="(pos: any) => handlePositionUpdate(item.id, pos)"
+          @update-position="(pos: Position) => handlePositionUpdate(item.id, pos)"
           @wrap-around="() => handleWrapAround(item.id)"
           @remove="() => handleItemRemove(item.id)"
         />
@@ -34,41 +39,30 @@ interface Emits {
   (e: 'remove-item', id: string): void
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 const blackboardRef = ref<HTMLElement | null>(null)
 const scrollAreaRef = ref<HTMLElement | null>(null)
 
 // Handle position updates from ScrollItem components
-const handlePositionUpdate = (id: string, position: Position) => {
+const handlePositionUpdate = (id: string, position: Position): void => {
   emit('update-position', id, position)
 }
 
 // Handle item removal
-const handleItemRemove = (id: string) => {
+const handleItemRemove = (id: string): void => {
   emit('remove-item', id)
 }
 
 // Handle wrap-around (item going off-screen and returning)
-const handleWrapAround = (id: string) => {
+const handleWrapAround = (_id: string): void => {
   // Optional: Add any wrap-around specific logic here
   // For now, position update will handle it
 }
 
-// Get board dimensions for child components
-const getBoardDimensions = () => {
-  if (blackboardRef.value) {
-    return {
-      width: blackboardRef.value.offsetWidth,
-      height: blackboardRef.value.offsetHeight
-    }
-  }
-  return { width: window.innerWidth, height: window.innerHeight }
-}
-
 // Handle resize events
-const handleResize = () => {
+const handleResize = (): void => {
   // Notify children about resize if needed
   // This could trigger position recalculation
 }

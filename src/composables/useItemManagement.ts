@@ -4,7 +4,6 @@ import { ScrollItemFactory } from '@/factories/ScrollItemFactory'
 import { ContentFactory } from '@/factories/ContentFactory'
 import { PositionService } from '@/services/PositionService'
 import { VelocityService } from '@/services/VelocityService'
-import type { ScrollItem } from '@/types/scroll-item'
 
 /**
  * スクロールアイテムの管理を行うComposable
@@ -108,7 +107,7 @@ export function useItemManagement() {
    * アイテムを削除
    * @param ids 削除するアイテムのID配列
    */
-  const removeItems = (ids: string[]) => {
+  const removeItems = (ids: string[]): void => {
     store.removeItems(ids)
   }
 
@@ -116,14 +115,14 @@ export function useItemManagement() {
    * 単一アイテムを削除
    * @param id 削除するアイテムのID
    */
-  const removeItem = (id: string) => {
+  const removeItem = (id: string): void => {
     store.removeItem(id)
   }
 
   /**
    * 全アイテムをクリア
    */
-  const clearAllItems = () => {
+  const clearAllItems = (): void => {
     store.clearItems()
   }
 
@@ -131,7 +130,7 @@ export function useItemManagement() {
    * アイテムを最前面に移動
    * @param id アイテムID
    */
-  const bringItemToFront = (id: string) => {
+  const bringItemToFront = (id: string): void => {
     store.bringToFront(id)
   }
 
@@ -139,7 +138,7 @@ export function useItemManagement() {
    * グローバル速度を更新
    * @param speedPercentage 速度のパーセンテージ（10-150）
    */
-  const updateGlobalSpeed = (speedPercentage: number) => {
+  const updateGlobalSpeed = (speedPercentage: number): void => {
     if (!velocityService) {
       throw new Error('VelocityService not initialized')
     }
@@ -157,14 +156,14 @@ export function useItemManagement() {
    * 表示アイテム数を更新
    * @param count 表示するアイテム数
    */
-  const updateItemCount = (count: number) => {
+  const updateItemCount = (count: number): void => {
     store.updateItemCount(count)
   }
 
   /**
    * テキスト表示を切り替え
    */
-  const toggleTextVisibility = () => {
+  const toggleTextVisibility = (): void => {
     store.toggleTexts()
   }
 
@@ -189,30 +188,38 @@ export function useItemManagement() {
     try {
       const response = await fetch(dataUrl)
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        throw new Error(`HTTP error! status: ${String(response.status)}`)
       }
 
-      const data = await response.json()
+      interface MediaData {
+        media_url_https?: string
+        text?: string
+      }
+      
+      const data = await response.json() as MediaData[]
       
       // 画像データを抽出
       const imageData = data
-        .filter((item: any) => item.media_url_https)
+        .filter((item): item is MediaData & { media_url_https: string } => 
+          item.media_url_https !== undefined && item.media_url_https !== null)
         .slice(0, maxImages)
-        .map((item: any) => ({
+        .map((item) => ({
           url: item.media_url_https,
-          title: item.text || 'Creative Wall Image'
+          title: item.text ?? 'Creative Wall Image'
         }))
 
       // テキストデータを抽出
       const textData = data
-        .filter((item: any) => item.text && item.text.length > 0)
-        .map((item: any) => item.text)
+        .filter((item): item is MediaData & { text: string } => 
+          item.text !== undefined && item.text !== null && item.text.length > 0)
+        .map((item) => item.text)
         .slice(0, maxTexts)
 
       // 混合アイテムリストを作成
-      const mixedItems: Array<{ type: 'image' | 'text'; data: any }> = []
+      interface MixedItem { type: 'image' | 'text'; data: { url: string; title: string } | string }
+      const mixedItems: MixedItem[] = []
       
-      imageData.forEach((img: any) => {
+      imageData.forEach((img) => {
         mixedItems.push({ type: 'image', data: img })
       })
 
@@ -226,7 +233,12 @@ export function useItemManagement() {
       if (shuffle) {
         for (let i = mixedItems.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1))
-          ;[mixedItems[i], mixedItems[j]] = [mixedItems[j], mixedItems[i]]
+          const temp = mixedItems[j]
+          const currentItem = mixedItems[i]
+          if (temp !== undefined && currentItem !== undefined) {
+            mixedItems[j] = currentItem
+            mixedItems[i] = temp
+          }
         }
       }
 
@@ -252,7 +264,7 @@ export function useItemManagement() {
    * @param width 新しい幅
    * @param height 新しい高さ
    */
-  const updateBoardDimensions = (width: number, height: number) => {
+  const updateBoardDimensions = (width: number, height: number): void => {
     if (positionService) {
       positionService.updateBoardDimensions(width, height)
     }
@@ -261,7 +273,7 @@ export function useItemManagement() {
   /**
    * パフォーマンス統計を取得
    */
-  const getStats = () => {
+  const getStats = (): { totalItems: number; visibleItems: number; imageItems: number; textItems: number; showTexts: boolean; globalSpeed: number; isInitialized: boolean; isLoading: boolean; error: string | null } => {
     return {
       totalItems: store.items.length,
       visibleItems: store.visibleItems.length,
@@ -278,20 +290,13 @@ export function useItemManagement() {
   /**
    * クリーンアップ
    */
-  const cleanup = () => {
+  const cleanup = (): void => {
     clearAllItems()
     positionService = null
     velocityService = null
     contentFactory = null
     itemFactory = null
     isInitialized.value = false
-  }
-
-  // ウィンドウリサイズの処理
-  const handleResize = () => {
-    const width = window.innerWidth - 60
-    const height = window.innerHeight - 120
-    updateBoardDimensions(width, height)
   }
 
   // ライフサイクル

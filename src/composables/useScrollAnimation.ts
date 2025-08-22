@@ -1,7 +1,6 @@
-import { ref } from 'vue'
-import type { Ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import type { ScrollItem } from '@/types/scroll-item'
-import { PositionService } from '@/services/PositionService'
+import { type PositionService } from '@/services/PositionService'
 import { useScrollItemsStore } from '@/stores/scrollItems'
 
 /**
@@ -25,7 +24,7 @@ export function useScrollAnimation(
    * @param items 更新対象のアイテム配列
    * @param deltaTime 前フレームからの経過時間（秒）
    */
-  const updateItemPositions = (items: ScrollItem[], deltaTime: number) => {
+  const updateItemPositions = (items: ScrollItem[], deltaTime: number): void => {
     const batchSize = 10 // バッチ処理のサイズ
     const itemsToUpdate = items.slice(0, Math.min(items.length, 100)) // 最大100アイテムまで処理
 
@@ -83,7 +82,7 @@ export function useScrollAnimation(
   /**
    * FPS計算
    */
-  const updateFps = (currentTime: number) => {
+  const updateFps = (currentTime: number): void => {
     frameCount++
     const elapsed = currentTime - lastFpsUpdate
     
@@ -97,8 +96,8 @@ export function useScrollAnimation(
   /**
    * アニメーションループ
    */
-  const animate = (currentTime: number) => {
-    if (!isRunning.value) return
+  const animate = (currentTime: number): void => {
+    if (!isRunning.value) {return}
 
     const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1) // 最大0.1秒のデルタタイム
     lastTime = currentTime
@@ -118,7 +117,7 @@ export function useScrollAnimation(
   /**
    * アニメーション開始
    */
-  const start = () => {
+  const start = (): void => {
     if (!isRunning.value) {
       isRunning.value = true
       lastTime = performance.now()
@@ -131,7 +130,7 @@ export function useScrollAnimation(
   /**
    * アニメーション停止
    */
-  const stop = () => {
+  const stop = (): void => {
     if (isRunning.value) {
       isRunning.value = false
       if (animationFrameId) {
@@ -144,7 +143,7 @@ export function useScrollAnimation(
   /**
    * アニメーション一時停止/再開のトグル
    */
-  const toggle = () => {
+  const toggle = (): void => {
     if (isRunning.value) {
       stop()
     } else {
@@ -155,7 +154,7 @@ export function useScrollAnimation(
   /**
    * パフォーマンス情報を取得
    */
-  const getPerformanceInfo = () => {
+  const getPerformanceInfo = (): { fps: number; isRunning: boolean; itemCount: number } => {
     return {
       fps: fps.value,
       isRunning: isRunning.value,
@@ -166,7 +165,7 @@ export function useScrollAnimation(
   /**
    * ボード寸法の更新を処理
    */
-  const handleResize = () => {
+  const handleResize = (): void => {
     if (positionService) {
       const width = window.innerWidth - 60
       const height = window.innerHeight - 120
@@ -228,7 +227,7 @@ export class GlobalAnimationManager {
   }
 
   private animate = (currentTime: number) => {
-    if (!this.isRunning) return
+    if (!this.isRunning) {return}
 
     const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1)
     this.lastTime = currentTime

@@ -110,7 +110,7 @@ test.describe('Creative Wall E2E Tests', () => {
     
     const fps = await page.evaluate(() => {
       return new Promise<number>((resolve) => {
-        let lastTime = performance.now()
+        const lastTime = performance.now()
         let frames = 0
         const targetFrames = 60
         

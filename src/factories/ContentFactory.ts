@@ -1,6 +1,6 @@
 import type { ImageContent, TextContent } from '@/types/scroll-item'
 import { SCROLL_CONFIG } from '@/config/scroll.config'
-import { randomChoice, randomRange, randomInt } from '@/utils/random'
+import { randomChoice, randomRange } from '@/utils/random'
 
 /**
  * スクロールアイテムのコンテンツ生成を担当するファクトリー

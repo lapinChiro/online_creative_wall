@@ -1,7 +1,7 @@
 import type { ScrollItem, ImageScrollItem, TextScrollItem } from '@/types/scroll-item'
-import { PositionService } from '@/services/PositionService'
-import { VelocityService } from '@/services/VelocityService'
-import { ContentFactory } from './ContentFactory'
+import { type PositionService } from '@/services/PositionService'
+import { type VelocityService } from '@/services/VelocityService'
+import { type ContentFactory } from './ContentFactory'
 import { randomRange } from '@/utils/random'
 
 /**
