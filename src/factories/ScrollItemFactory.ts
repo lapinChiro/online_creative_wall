@@ -81,7 +81,7 @@ export class ScrollItemFactory {
    * @returns スクロールアイテムの配列
    */
   createBatch(
-    items: Array<{ type: 'image' | 'text'; data: any }>,
+    items: Array<{ type: 'image'; data: { url: string; title?: string } } | { type: 'text'; data: string }>,
     startIndex: number,
     baseVelocity: number
   ): ScrollItem[] {
@@ -137,7 +137,7 @@ export class ScrollItemFactory {
    */
   private generateId(prefix: string, index: number): string {
     this.itemCounter++
-    return `${prefix}-${Date.now()}-${index}-${this.itemCounter}`
+    return `${prefix}-${String(Date.now())}-${String(index)}-${String(this.itemCounter)}`
   }
   
   /**

@@ -129,8 +129,8 @@ describe('ScrollItems Store', () => {
         store.addItem(item)
         store.updateItem('img-1', { position: { x: 500, y: 300 } })
         
-        expect(store.items[0]?.position?.x).toBe(500)
-        expect(store.items[0]?.position?.y).toBe(300)
+        expect(store.items[0]?.position.x).toBe(500)
+        expect(store.items[0]?.position.y).toBe(300)
       })
 
       it('should handle updating non-existent item', () => {

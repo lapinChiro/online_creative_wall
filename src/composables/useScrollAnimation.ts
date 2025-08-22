@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, type Ref } from 'vue'
 import type { ScrollItem } from '@/types/scroll-item'
 import { type PositionService } from '@/services/PositionService'
 import { useScrollItemsStore } from '@/stores/scrollItems'
@@ -7,9 +7,19 @@ import { useScrollItemsStore } from '@/stores/scrollItems'
  * スクロールアニメーションを管理するComposable
  * 単一のrequestAnimationFrameループで複数アイテムを効率的に処理
  */
+interface UseScrollAnimationReturn {
+  isRunning: Ref<boolean>
+  fps: Ref<number>
+  start: () => void
+  stop: () => void
+  toggle: () => void
+  getPerformanceInfo: () => { fps: number; isRunning: boolean; itemCount: number }
+  handleResize: () => void
+}
+
 export function useScrollAnimation(
   positionService: PositionService | null = null
-) {
+): UseScrollAnimationReturn {
   const store = useScrollItemsStore()
   const isRunning = ref(false)
   const fps = ref(0)
@@ -39,7 +49,7 @@ export function useScrollAnimation(
         // 画面外判定（簡易版）
         const itemWidth = getItemWidth(item)
         
-        if (positionService?.shouldWrapAround(newPosition, itemWidth)) {
+        if (positionService?.shouldWrapAround(newPosition, itemWidth) === true) {
           // PositionServiceを使用してループ位置を取得
           const wrapPosition = positionService.getWrapAroundPosition()
           store.updateItemPosition(item.id, wrapPosition)
@@ -72,7 +82,7 @@ export function useScrollAnimation(
         large: 150,
         xlarge: 180
       }
-      return sizeMap[item.content.size] || 120
+      return sizeMap[item.content.size]
     } else {
       // テキストの場合は固定値
       return 200
@@ -133,7 +143,7 @@ export function useScrollAnimation(
   const stop = (): void => {
     if (isRunning.value) {
       isRunning.value = false
-      if (animationFrameId) {
+      if (animationFrameId !== null) {
         cancelAnimationFrame(animationFrameId)
         animationFrameId = null
       }
@@ -166,7 +176,7 @@ export function useScrollAnimation(
    * ボード寸法の更新を処理
    */
   const handleResize = (): void => {
-    if (positionService) {
+    if (positionService !== null) {
       const width = window.innerWidth - 60
       const height = window.innerHeight - 120
       positionService.updateBoardDimensions(width, height)
@@ -198,7 +208,7 @@ export class GlobalAnimationManager {
   private constructor() {}
 
   static getInstance(): GlobalAnimationManager {
-    if (!GlobalAnimationManager.instance) {
+    if (GlobalAnimationManager.instance === null) {
       GlobalAnimationManager.instance = new GlobalAnimationManager()
     }
     return GlobalAnimationManager.instance
@@ -226,7 +236,7 @@ export class GlobalAnimationManager {
     }
   }
 
-  private animate = (currentTime: number) => {
+  private animate = (currentTime: number): void => {
     if (!this.isRunning) {return}
 
     const deltaTime = Math.min((currentTime - this.lastTime) / 1000, 0.1)
@@ -244,7 +254,7 @@ export class GlobalAnimationManager {
     this.animationFrameId = requestAnimationFrame(this.animate)
   }
 
-  private start() {
+  private start(): void {
     if (!this.isRunning) {
       this.isRunning = true
       this.lastTime = performance.now()
@@ -252,10 +262,10 @@ export class GlobalAnimationManager {
     }
   }
 
-  private stop() {
+  private stop(): void {
     if (this.isRunning) {
       this.isRunning = false
-      if (this.animationFrameId) {
+      if (this.animationFrameId !== null) {
         cancelAnimationFrame(this.animationFrameId)
         this.animationFrameId = null
       }
@@ -265,15 +275,15 @@ export class GlobalAnimationManager {
   /**
    * 手動でアニメーションを開始/停止
    */
-  forceStart() {
+  forceStart(): void {
     this.start()
   }
 
-  forceStop() {
+  forceStop(): void {
     this.stop()
   }
 
-  getStatus() {
+  getStatus(): { isRunning: boolean; subscriberCount: number } {
     return {
       isRunning: this.isRunning,
       subscriberCount: this.subscribers.size
@@ -298,14 +308,14 @@ export function useGlobalAnimation(
   })
 
   onUnmounted(() => {
-    if (unsubscribe) {
+    if (unsubscribe !== null) {
       unsubscribe()
     }
   })
 
   return {
     unsubscribe: () => {
-      if (unsubscribe) {
+      if (unsubscribe !== null) {
         unsubscribe()
       }
     },

@@ -129,7 +129,7 @@ describe('TextContent', () => {
       
       const element = wrapper.find('.text-content')
       const style = element.attributes('style')
-      expect(style).toContain(`font-size: ${fontSize}em`)
+      expect(style).toContain(`font-size: ${String(fontSize)}em`)
     }
   })
 })

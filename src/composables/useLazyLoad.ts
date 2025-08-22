@@ -1,7 +1,13 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import type { Ref } from 'vue'
 
-export function useLazyLoad(elementRef: Ref<HTMLElement | null>) {
+export function useLazyLoad(elementRef: Ref<HTMLElement | null>): {
+  isIntersecting: Ref<boolean>
+  isLoaded: Ref<boolean>
+  isLoading: Ref<boolean>
+  hasError: Ref<boolean>
+  loadImage: (src: string) => Promise<void>
+} {
   const isIntersecting = ref(false)
   const isLoaded = ref(false)
   const isLoading = ref(false)
@@ -31,7 +37,7 @@ export function useLazyLoad(elementRef: Ref<HTMLElement | null>) {
   }
   
   onMounted(() => {
-    if (!elementRef.value) {return}
+    if (elementRef.value === null) {return}
     
     observer = new IntersectionObserver(
       (entries) => {

@@ -1,15 +1,37 @@
-import { ref } from 'vue'
+import { ref, type Ref } from 'vue'
 import { useScrollItemsStore } from '@/stores/scrollItems'
 import { ScrollItemFactory } from '@/factories/ScrollItemFactory'
 import { ContentFactory } from '@/factories/ContentFactory'
 import { PositionService } from '@/services/PositionService'
 import { VelocityService } from '@/services/VelocityService'
+import type { ScrollItem, ImageScrollItem, TextScrollItem } from '@/types/scroll-item'
 
 /**
  * スクロールアイテムの管理を行うComposable
  * ファクトリーとストアを連携させてアイテムのライフサイクルを管理
  */
-export function useItemManagement() {
+interface UseItemManagementReturn {
+  isInitialized: Ref<boolean>
+  isLoading: Ref<boolean>
+  error: Ref<string | null>
+  initializeServices: (boardWidth: number, boardHeight: number, globalSpeed?: number) => void
+  addImageItems: (images: Array<{ url: string; title?: string }>, startIndex?: number) => ImageScrollItem[]
+  addTextItems: (texts: string[], startIndex?: number) => TextScrollItem[]
+  addMixedItems: (items: Array<{ type: 'image'; data: { url: string; title?: string } } | { type: 'text'; data: string }>, startIndex?: number) => ScrollItem[]
+  removeItems: (ids: string[]) => void
+  removeItem: (id: string) => void
+  clearAllItems: () => void
+  bringItemToFront: (id: string) => void
+  updateGlobalSpeed: (speedPercentage: number) => void
+  updateItemCount: (count: number) => void
+  toggleTextVisibility: () => void
+  fetchAndGenerateItems: (dataUrl: string, options?: { maxImages?: number; maxTexts?: number; textProbability?: number; shuffle?: boolean }) => Promise<{ imageCount: number; textCount: number }>
+  updateBoardDimensions: (width: number, height: number) => void
+  getStats: () => { totalItems: number; visibleItems: number; imageItems: number; textItems: number; showTexts: boolean; globalSpeed: number; isInitialized: boolean; isLoading: boolean; error: string | null }
+  cleanup: () => void
+}
+
+export function useItemManagement(): UseItemManagementReturn {
   const store = useScrollItemsStore()
   const isInitialized = ref(false)
   const isLoading = ref(false)
@@ -29,7 +51,7 @@ export function useItemManagement() {
   const initializeServices = (
     boardWidth: number = window.innerWidth - 60,
     boardHeight: number = window.innerHeight - 120
-  ) => {
+  ): void => {
     try {
       positionService = new PositionService(boardWidth, boardHeight)
       velocityService = new VelocityService()
@@ -51,11 +73,11 @@ export function useItemManagement() {
    * @param imageData 画像データの配列
    * @param startIndex 開始インデックス
    */
-  const addImageItems = async (
+  const addImageItems = (
     imageData: Array<{ url: string; title?: string }>,
     startIndex: number = 0
-  ) => {
-    if (!itemFactory || !velocityService) {
+  ): ImageScrollItem[] => {
+    if (itemFactory === null || velocityService === null) {
       throw new Error('Services not initialized')
     }
 
@@ -70,11 +92,11 @@ export function useItemManagement() {
    * @param texts テキストの配列
    * @param startIndex 開始インデックス
    */
-  const addTextItems = async (
+  const addTextItems = (
     texts: string[],
     startIndex: number = 0
-  ) => {
-    if (!itemFactory || !velocityService) {
+  ): TextScrollItem[] => {
+    if (itemFactory === null || velocityService === null) {
       throw new Error('Services not initialized')
     }
 
@@ -89,11 +111,11 @@ export function useItemManagement() {
    * @param mixedItems 画像とテキストの混合配列
    * @param startIndex 開始インデックス
    */
-  const addMixedItems = async (
-    mixedItems: Array<{ type: 'image' | 'text'; data: any }>,
+  const addMixedItems = (
+    mixedItems: Array<{ type: 'image'; data: { url: string; title?: string } } | { type: 'text'; data: string }>,
     startIndex: number = 0
-  ) => {
-    if (!itemFactory || !velocityService) {
+  ): ScrollItem[] => {
+    if (itemFactory === null || velocityService === null) {
       throw new Error('Services not initialized')
     }
 
@@ -139,7 +161,7 @@ export function useItemManagement() {
    * @param speedPercentage 速度のパーセンテージ（10-150）
    */
   const updateGlobalSpeed = (speedPercentage: number): void => {
-    if (!velocityService) {
+    if (velocityService === null) {
       throw new Error('VelocityService not initialized')
     }
 
@@ -179,7 +201,7 @@ export function useItemManagement() {
       maxTexts?: number
       shuffle?: boolean
     } = {}
-  ) => {
+  ): Promise<{ imageCount: number; textCount: number; totalCount: number }> => {
     const { maxImages = 20, maxTexts = 15, shuffle = true } = options
     
     isLoading.value = true
@@ -201,7 +223,7 @@ export function useItemManagement() {
       // 画像データを抽出
       const imageData = data
         .filter((item): item is MediaData & { media_url_https: string } => 
-          item.media_url_https !== undefined && item.media_url_https !== null)
+          item.media_url_https !== undefined)
         .slice(0, maxImages)
         .map((item) => ({
           url: item.media_url_https,
@@ -211,12 +233,12 @@ export function useItemManagement() {
       // テキストデータを抽出
       const textData = data
         .filter((item): item is MediaData & { text: string } => 
-          item.text !== undefined && item.text !== null && item.text.length > 0)
+          item.text !== undefined && item.text.length > 0)
         .map((item) => item.text)
         .slice(0, maxTexts)
 
       // 混合アイテムリストを作成
-      interface MixedItem { type: 'image' | 'text'; data: { url: string; title: string } | string }
+      type MixedItem = { type: 'image'; data: { url: string; title?: string } } | { type: 'text'; data: string }
       const mixedItems: MixedItem[] = []
       
       imageData.forEach((img) => {
@@ -243,7 +265,7 @@ export function useItemManagement() {
       }
 
       // アイテムを追加
-      await addMixedItems(mixedItems, 0)
+      addMixedItems(mixedItems, 0)
 
       return {
         imageCount: imageData.length,
@@ -265,7 +287,7 @@ export function useItemManagement() {
    * @param height 新しい高さ
    */
   const updateBoardDimensions = (width: number, height: number): void => {
-    if (positionService) {
+    if (positionService !== null) {
       positionService.updateBoardDimensions(width, height)
     }
   }

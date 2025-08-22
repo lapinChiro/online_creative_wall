@@ -63,7 +63,9 @@ describe('Random Utilities', () => {
     })
 
     it('should return undefined for empty array', () => {
-      expect(randomElement([])).toBeUndefined()
+      const emptyArray: string[] = []
+      const result = randomElement(emptyArray)
+      expect(result).toBeUndefined()
     })
 
     it('should return single element for array with one item', () => {

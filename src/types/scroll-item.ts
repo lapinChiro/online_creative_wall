@@ -86,20 +86,28 @@ export const isTextItem = (item: ScrollItem): item is TextScrollItem => {
 
 // 互換性のためのエイリアス（nullチェック付き）
 export const isImageScrollItem = (item: unknown): item is ImageScrollItem => {
-  return item !== null && item !== undefined && (item as ImageScrollItem).type === 'image'
+  return item !== null && 
+    item !== undefined && 
+    typeof item === 'object' && 
+    'type' in item && 
+    (item as Record<string, unknown>)['type'] === 'image'
 }
 
 export const isTextScrollItem = (item: unknown): item is TextScrollItem => {
-  return item !== null && item !== undefined && (item as TextScrollItem).type === 'text'
+  return item !== null && 
+    item !== undefined && 
+    typeof item === 'object' && 
+    'type' in item && 
+    (item as Record<string, unknown>)['type'] === 'text'
 }
 export const isScrollItem = (item: unknown): item is ScrollItem => {
-  if (!item || typeof item !== 'object') {
+  if (item === null || item === undefined || typeof item !== 'object') {
     return false
   }
   const obj = item as Record<string, unknown>
   
   // Check for required fields
-  if (!obj['type'] || !obj['id'] || !obj['position']) {
+  if (obj['type'] === undefined || obj['id'] === undefined || obj['position'] === undefined) {
     return false
   }
   

@@ -19,7 +19,7 @@ export class ContentFactory {
     
     return {
       url: data.url,
-      title: data.title || 'Creative Wall Image',
+      title: data.title ?? 'Creative Wall Image',
       size
     }
   }
@@ -56,7 +56,7 @@ export class ContentFactory {
   ): ImageContent {
     return {
       url: data.url,
-      title: data.title || 'Creative Wall Image',
+      title: data.title ?? 'Creative Wall Image',
       size
     }
   }
@@ -124,10 +124,10 @@ export class ContentFactory {
    * @returns 有効な場合true
    */
   validateImageContent(content: ImageContent): boolean {
-    if (!content.url || typeof content.url !== 'string') {
+    if (content.url === '' || typeof content.url !== 'string') {
       return false
     }
-    if (!content.title || typeof content.title !== 'string') {
+    if (content.title === '' || typeof content.title !== 'string') {
       return false
     }
     const validSizes: ImageContent['size'][] = ['small', 'medium', 'large', 'xlarge']
@@ -143,7 +143,7 @@ export class ContentFactory {
    * @returns 有効な場合true
    */
   validateTextContent(content: TextContent): boolean {
-    if (!content.text || typeof content.text !== 'string') {
+    if (content.text === '' || typeof content.text !== 'string') {
       return false
     }
     const validColors = SCROLL_CONFIG.colors.text as readonly string[]

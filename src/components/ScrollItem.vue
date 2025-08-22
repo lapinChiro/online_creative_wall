@@ -29,9 +29,7 @@ interface Props {
 }
 
 interface Emits {
-  (e: 'click', id: string): void
-  (e: 'wrap-around', id: string): void
-  (e: 'remove', id: string): void
+  (e: 'click' | 'wrap-around' | 'remove', id: string): void
 }
 
 const props = defineProps<Props>()
@@ -43,9 +41,9 @@ const isFocused = ref(false)
 // スタイル計算（位置はストアから直接参照）
 const itemStyle = computed(() => ({
   position: 'absolute' as const,
-  left: `${props.item.position.x}px`,
-  top: `${props.item.position.y}px`,
-  transform: `rotate(${props.item.rotation}deg)`,
+  left: `${String(props.item.position.x)}px`,
+  top: `${String(props.item.position.y)}px`,
+  transform: `rotate(${String(props.item.rotation)}deg)`,
   zIndex: props.item.zIndex,
   transition: isFocused.value ? 'transform 0.2s ease' : 'none',
   cursor: 'pointer' as const
@@ -53,7 +51,7 @@ const itemStyle = computed(() => ({
 
 // 位置変更の監視（画面外判定用）
 watch(() => props.item.position.x, (newX) => {
-  if (itemRef.value) {
+  if (itemRef.value !== null) {
     const width = itemRef.value.offsetWidth
     if (newX < -width) {
       emit('wrap-around', props.item.id)
@@ -74,7 +72,7 @@ const handleClick = (): void => {
 
 // 要素の幅を取得（外部から参照可能）
 const getWidth = (): number => {
-  return itemRef.value?.offsetWidth || 0
+  return itemRef.value?.offsetWidth ?? 0
 }
 
 // パブリックメソッドの公開

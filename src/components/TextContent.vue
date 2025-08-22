@@ -28,7 +28,7 @@ const displayText = computed(() => {
 })
 
 const textStyle = computed(() => ({
-  fontSize: `${props.content.fontSize}em`
+  fontSize: `${String(props.content.fontSize)}em`
 }))
 </script>
 

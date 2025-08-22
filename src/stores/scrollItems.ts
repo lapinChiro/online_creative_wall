@@ -90,7 +90,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    */
   function updateItemPosition(id: string, position: { x: number; y: number }): void {
     const item = items.value.find(item => item.id === id)
-    if (item) {
+    if (item !== undefined) {
       item.position = position
     }
   }
@@ -102,7 +102,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    */
   function updateItemVelocity(id: string, velocity: number): void {
     const item = items.value.find(item => item.id === id)
-    if (item) {
+    if (item !== undefined) {
       item.velocity = velocity
     }
   }
@@ -114,7 +114,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    */
   function updateItemZIndex(id: string, zIndex: number): void {
     const item = items.value.find(item => item.id === id)
-    if (item) {
+    if (item !== undefined) {
       item.zIndex = zIndex
     }
   }
@@ -152,7 +152,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    */
   function updateItem(id: string, updates: Partial<ScrollItem>): void {
     const item = items.value.find(item => item.id === id)
-    if (item) {
+    if (item !== undefined) {
       Object.assign(item, updates)
     }
   }
@@ -201,7 +201,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    */
   function bringToFront(id: string): void {
     const item = items.value.find(item => item.id === id)
-    if (item) {
+    if (item !== undefined) {
       const maxZ = Math.max(...items.value.map(i => i.zIndex))
       item.zIndex = maxZ + 1
     }
@@ -244,7 +244,7 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
   /**
    * ストアをリセット
    */
-  function $reset() {
+  function $reset(): void {
     items.value = []
     globalVelocity.value = 50
     itemCount.value = 20

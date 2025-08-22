@@ -76,19 +76,23 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 const maxDataCount = ref(100)
 
-// Services and factories
-let positionService: PositionService | null = null
-let velocityService: VelocityService | null = null
-let contentFactory: ContentFactory | null = null
-let itemFactory: ScrollItemFactory | null = null
-
-// Initialize position service early for animation controller
+// Initialize services and factories immediately
 const boardWidth = window.innerWidth - 60
 const boardHeight = window.innerHeight - 120
-const initialPositionService = new PositionService(boardWidth, boardHeight)
+const positionService = new PositionService(boardWidth, boardHeight)
+const velocityService = new VelocityService()
+const contentFactory = new ContentFactory()
+const itemFactory = new ScrollItemFactory(
+  positionService,
+  velocityService,
+  contentFactory
+)
+
+// Set initial global velocity
+velocityService.setGlobalMultiplier(scrollItemsStore.globalVelocity)
 
 // Animation management - Initialize at setup level
-const animationController = useScrollAnimation(initialPositionService)
+const animationController = useScrollAnimation(positionService)
 
 // Type definitions for fetched data
 interface FetchedImage {
@@ -105,24 +109,13 @@ interface MediaItem {
 const fetchedImageData = ref<FetchedImage[]>([])
 const fetchedTextData = ref<string[]>([])
 
-const initializeServices = (): void => {
-  // Initialize services
-  positionService = initialPositionService // Use the already created instance
-  velocityService = new VelocityService()
-  contentFactory = new ContentFactory()
-  itemFactory = new ScrollItemFactory(
-    positionService,
-    velocityService,
-    contentFactory
-  )
-  
-  // Set initial global velocity
-  velocityService.setGlobalMultiplier(scrollItemsStore.globalVelocity)
-}
 
 const fetchData = async (): Promise<void> => {
   try {
-    const mediaUrl = import.meta.env['VITE_MEDIA_DATA_URL'] || new Error("Media URL is not defined");
+    const mediaUrl = import.meta.env['VITE_MEDIA_DATA_URL'] as string | undefined
+    if (mediaUrl === undefined || mediaUrl === '') {
+      throw new Error("Media URL is not defined")
+    }
 
     const response = await fetch(mediaUrl)
     if (!response.ok) {
@@ -133,7 +126,7 @@ const fetchData = async (): Promise<void> => {
     // Process image data
     fetchedImageData.value = data
       .filter((item: MediaItem): item is MediaItem & { media_url_https: string } => 
-        item.media_url_https !== undefined && item.media_url_https !== null)
+        item.media_url_https !== undefined)
       .map((item) => ({
         url: item.media_url_https,
         title: item.text ?? 'Image'
@@ -142,7 +135,7 @@ const fetchData = async (): Promise<void> => {
     // Process text data
     fetchedTextData.value = data
       .filter((item: MediaItem): item is MediaItem & { text: string } => 
-        item.text !== undefined && item.text !== null && item.text.length > 0)
+        item.text !== undefined && item.text.length > 0)
       .map((item) => item.text)
       .slice(0, 30) // Limit texts
     
@@ -154,11 +147,6 @@ const fetchData = async (): Promise<void> => {
 }
 
 const generateItems = (): void => {
-  // Check if services are initialized
-  if (!itemFactory || !velocityService) {
-    console.error('Services not initialized yet')
-    return
-  }
   
   // Clear existing items
   scrollItemsStore.clearItems()
@@ -171,7 +159,7 @@ const generateItems = (): void => {
   const textCount = Math.min(15, fetchedTextData.value.length)
   
   // Create mixed item list
-  const items: Array<{ type: 'image' | 'text', data: any }> = []
+  const items: Array<{ type: 'image', data: FetchedImage } | { type: 'text', data: string }> = []
   
   // Add images
   fetchedImageData.value.slice(0, imageCount).forEach(imageData => {
@@ -197,15 +185,11 @@ const generateItems = (): void => {
   }
   
   // Create scroll items using factory
-  if (!itemFactory) {
-    throw new Error('ItemFactory not initialized')
-  }
-  const factory = itemFactory // Store in const for TypeScript
   const scrollItems = items.map((item, index) => {
     if (item.type === 'image') {
-      return factory.createImageItem(item.data, index, baseVelocity)
+      return itemFactory.createImageItem(item.data, index, baseVelocity)
     } else {
-      return factory.createTextItem(item.data, index, baseVelocity)
+      return itemFactory.createTextItem(item.data, index, baseVelocity)
     }
   })
   
@@ -231,10 +215,6 @@ const handleItemRemove = (id: string): void => {
 
 const regenerateItems = (): void => {
   // Smart regeneration - only add/remove items as needed
-  if (!itemFactory || !velocityService) {
-    console.error('Services not initialized yet')
-    return
-  }
 
   const currentItemCount = scrollItemsStore.items.length
   const targetItemCount = scrollItemsStore.itemCount
@@ -243,7 +223,7 @@ const regenerateItems = (): void => {
   if (targetItemCount > currentItemCount) {
     // Need to add more items
     const itemsToAdd = targetItemCount - currentItemCount
-    const newItems: Array<{ type: 'image' | 'text', data: any }> = []
+    const newItems: Array<{ type: 'image', data: FetchedImage } | { type: 'text', data: string }> = []
     
     // Calculate available data
     const availableImages = fetchedImageData.value.length
@@ -255,37 +235,42 @@ const regenerateItems = (): void => {
       
       if (shouldAddImage) {
         const imageIndex = Math.floor(Math.random() * availableImages)
-        newItems.push({ 
-          type: 'image', 
-          data: fetchedImageData.value[imageIndex] 
-        })
+        const imageData = fetchedImageData.value[imageIndex]
+        if (imageData !== undefined) {
+          newItems.push({ 
+            type: 'image', 
+            data: imageData 
+          })
+        }
       } else if (availableTexts > 0) {
         const textIndex = Math.floor(Math.random() * availableTexts)
-        newItems.push({ 
-          type: 'text', 
-          data: fetchedTextData.value[textIndex] 
-        })
+        const textData = fetchedTextData.value[textIndex]
+        if (textData !== undefined) {
+          newItems.push({ 
+            type: 'text', 
+            data: textData 
+          })
+        }
       } else if (availableImages > 0) {
         // Fallback to image if no texts available
         const imageIndex = Math.floor(Math.random() * availableImages)
-        newItems.push({ 
-          type: 'image', 
-          data: fetchedImageData.value[imageIndex] 
-        })
+        const imageData = fetchedImageData.value[imageIndex]
+        if (imageData !== undefined) {
+          newItems.push({ 
+            type: 'image', 
+            data: imageData 
+          })
+        }
       }
     }
     
     // Create scroll items using factory with higher starting index
-    if (!itemFactory) {
-      throw new Error('ItemFactory not initialized')
-    }
-    const factory = itemFactory // Store in const for TypeScript
     const scrollItems = newItems.map((item, index) => {
       const itemIndex = currentItemCount + index
       if (item.type === 'image') {
-        return factory.createImageItem(item.data, itemIndex, baseVelocity)
+        return itemFactory.createImageItem(item.data, itemIndex, baseVelocity)
       } else {
-        return factory.createTextItem(item.data, itemIndex, baseVelocity)
+        return itemFactory.createTextItem(item.data, itemIndex, baseVelocity)
       }
     })
     
@@ -308,10 +293,6 @@ const regenerateItems = (): void => {
 
 const updateGlobalSpeed = (): void => {
   // Update velocity service with new global speed
-  if (!velocityService) {
-    console.error('VelocityService not initialized')
-    return
-  }
   velocityService.setGlobalMultiplier(scrollItemsStore.globalVelocity)
   
   // Update all existing items' velocities
@@ -322,8 +303,8 @@ const initializeApp = async (): Promise<void> => {
   loading.value = true
   
   try {
-    // Initialize services
-    initializeServices()
+    // Services are already initialized at the top level
+    // initializeServices() - No longer needed
     
     // Fetch data
     await fetchData()
@@ -344,18 +325,14 @@ const initializeApp = async (): Promise<void> => {
 const handleResize = (): void => {
   const boardWidth = window.innerWidth - 60
   const boardHeight = window.innerHeight - 120
-  if (positionService) {
-    positionService.updateBoardDimensions(boardWidth, boardHeight)
-  }
+  positionService.updateBoardDimensions(boardWidth, boardHeight)
 }
 
 onMounted(async () => {
   await initializeApp()
   
   // Start animation after data is ready
-  if (animationController) {
-    animationController.start()
-  }
+  animationController.start()
   
   window.addEventListener('resize', handleResize)
   window.addEventListener('resize', animationController.handleResize)
@@ -366,9 +343,7 @@ onUnmounted(() => {
   window.removeEventListener('resize', animationController.handleResize)
   
   // Stop animation if running
-  if (animationController) {
-    animationController.stop()
-  }
+  animationController.stop()
   
   scrollItemsStore.clearItems()
 })
