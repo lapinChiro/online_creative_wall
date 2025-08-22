@@ -33,4 +33,4 @@ test-results/
 playwright-report/
 
 .env
-tmp/
+temp/
