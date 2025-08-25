@@ -32,6 +32,11 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
   const boardWidth = ref(0) // ボードの幅
   const boardHeight = ref(0) // ボードの高さ
   
+  // PAUSE機能の状態
+  const isPaused = ref(false) // 一時停止状態
+  const pausedPositions = ref(new Map<string, number>()) // itemId → translateX値のマップ
+  const pauseTimestamp = ref<number | null>(null) // 一時停止した時刻
+  
   // Getters
   const imageItems = computed(() => 
     items.value.filter(isImageItem)
@@ -286,6 +291,56 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     showTexts.value = true
     boardWidth.value = 0
     boardHeight.value = 0
+    isPaused.value = false
+    pausedPositions.value.clear()
+    pauseTimestamp.value = null
+  }
+  
+  // PAUSE機能のアクション
+  /**
+   * 一時停止状態を設定
+   * @param value 一時停止するかどうか
+   */
+  function setIsPaused(value: boolean): void {
+    isPaused.value = value
+    if (value) {
+      pauseTimestamp.value = Date.now()
+    } else {
+      pauseTimestamp.value = null
+      clearPausedPositions()
+    }
+  }
+  
+  /**
+   * 一時停止状態をトグル
+   */
+  function togglePause(): void {
+    setIsPaused(!isPaused.value)
+  }
+  
+  /**
+   * アイテムの一時停止位置を保存
+   * @param itemId アイテムID
+   * @param translateX X座標のtranslate値
+   */
+  function savePausedPosition(itemId: string, translateX: number): void {
+    pausedPositions.value.set(itemId, translateX)
+  }
+  
+  /**
+   * アイテムの一時停止位置を取得
+   * @param itemId アイテムID
+   * @returns 保存されているtranslateX値（ない場合はundefined）
+   */
+  function getPausedPositionX(itemId: string): number | undefined {
+    return pausedPositions.value.get(itemId)
+  }
+  
+  /**
+   * すべての一時停止位置をクリア
+   */
+  function clearPausedPositions(): void {
+    pausedPositions.value.clear()
   }
   
   return {
@@ -296,6 +351,9 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     showTexts,
     boardWidth,
     boardHeight,
+    isPaused,
+    pausedPositions,
+    pauseTimestamp,
     
     // Getters
     imageItems,
@@ -326,6 +384,13 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     getItemById,
     getItemsByType,
     updateAllVelocities,
-    $reset
+    $reset,
+    
+    // PAUSE Actions
+    setIsPaused,
+    togglePause,
+    savePausedPosition,
+    getPausedPositionX,
+    clearPausedPositions
   }
 })

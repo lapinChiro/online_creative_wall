@@ -4,6 +4,19 @@
       v-if="!loading && !error"
       class="controls-container"
     >
+      <button
+        id="pause-button"
+        class="pause-button"
+        role="button"
+        :aria-pressed="isPaused ? 'true' : 'false'"
+        :aria-label="isPaused ? '再生' : '一時停止'"
+        tabindex="0"
+        @click="togglePause"
+      >
+        <span class="pause-icon">
+          {{ isPaused ? '▶' : '⏸' }}
+        </span>
+      </button>
       <button 
         class="toggle-text-btn"
         @click="scrollItemsStore.toggleTexts()"
@@ -65,6 +78,7 @@ import { ref, onMounted, onUnmounted, defineAsyncComponent } from 'vue'
 import { useScrollItemsStore } from '@/stores/scrollItems'
 import { useScrollAnimation } from '@/composables/useScrollAnimation'
 import { useScrollAnimationWorker } from '@/composables/useScrollAnimationWorker'
+import { usePauseControl } from '@/composables/usePauseControl'
 import { ScrollItemFactory } from '@/factories/ScrollItemFactory'
 import { ContentFactory } from '@/factories/ContentFactory'
 import { PositionService } from '@/services/PositionService'
@@ -84,6 +98,9 @@ const scrollItemsStore = useScrollItemsStore()
 const loading = ref(true)
 const error = ref<string | null>(null)
 const maxDataCount = ref<number>(SCROLL_CONFIG.layout.maxDataCount)
+
+// Initialize PAUSE control
+const { isPaused, toggle: togglePause } = usePauseControl()
 
 // Initialize services and factories immediately
 const boardSize = calculateBoardSize()
@@ -310,6 +327,17 @@ const handleResize = (): void => {
   positionService.updateBoardDimensions(newBoardSize.width, newBoardSize.height)
 }
 
+// キーボードイベントハンドラー
+const handleKeyDown = (event: KeyboardEvent): void => {
+  // スペースキー（keyCode=32 または key=' '）かつテキスト入力フィールドにフォーカスがない
+  if ((event.keyCode === 32 || event.key === ' ') && 
+      !(event.target instanceof HTMLInputElement || 
+        event.target instanceof HTMLTextAreaElement)) {
+    event.preventDefault() // ページスクロールを防ぐ
+    togglePause() // PAUSE機能をトグル
+  }
+}
+
 onMounted(async () => {
   await initializeApp()
   
@@ -318,11 +346,15 @@ onMounted(async () => {
   
   window.addEventListener('resize', handleResize)
   window.addEventListener('resize', animationController.handleResize)
+  
+  // キーボードショートカット: スペースキーでPAUSE切り替え
+  window.addEventListener('keydown', handleKeyDown)
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('resize', animationController.handleResize)
+  window.removeEventListener('keydown', handleKeyDown)
   
   // Stop animation if running
   animationController.stop()
@@ -358,6 +390,43 @@ onUnmounted(() => {
   gap: 15px;
   align-items: center;
   flex-wrap: wrap;
+}
+
+.pause-button {
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #333;
+  border-radius: 8px;
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pause-button:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.pause-button:active {
+  transform: translateY(0);
+}
+
+.pause-button:focus {
+  outline: 2px solid #4CAF50;
+  outline-offset: 2px;
+}
+
+.pause-icon {
+  display: inline-block;
+  color: #333;
 }
 
 .toggle-text-btn {
