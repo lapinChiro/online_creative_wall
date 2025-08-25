@@ -47,6 +47,21 @@ describe('ScrollItems Store', () => {
       const store = useScrollItemsStore()
       expect(store.speedMultiplier).toBe(1)
     })
+    
+    it('should have isPaused as false initially', () => {
+      const store = useScrollItemsStore()
+      expect(store.isPaused).toBe(false)
+    })
+    
+    it('should have empty pausedPositions initially', () => {
+      const store = useScrollItemsStore()
+      expect(store.pausedPositions.size).toBe(0)
+    })
+    
+    it('should have null pauseTimestamp initially', () => {
+      const store = useScrollItemsStore()
+      expect(store.pauseTimestamp).toBeNull()
+    })
 
     it('should have board dimensions of 0', () => {
       const store = useScrollItemsStore()
@@ -387,6 +402,103 @@ describe('ScrollItems Store', () => {
       expect(store.globalVelocity).toBe(50)
       expect(store.itemCount).toBe(20)
       expect(store.showTexts).toBe(true)
+    })
+    
+    it('should reset PAUSE state to initial values', () => {
+      const store = useScrollItemsStore()
+      
+      store.setIsPaused(true)
+      store.savePausedPosition('test-id', 100)
+      
+      store.$reset()
+      
+      expect(store.isPaused).toBe(false)
+      expect(store.pausedPositions.size).toBe(0)
+      expect(store.pauseTimestamp).toBeNull()
+    })
+  })
+  
+  describe('PAUSE Functionality', () => {
+    it('should set isPaused to true and set timestamp', () => {
+      const store = useScrollItemsStore()
+      const beforeTime = Date.now()
+      
+      store.setIsPaused(true)
+      
+      expect(store.isPaused).toBe(true)
+      expect(store.pauseTimestamp).toBeGreaterThanOrEqual(beforeTime)
+      expect(store.pauseTimestamp).toBeLessThanOrEqual(Date.now())
+    })
+    
+    it('should set isPaused to false and clear timestamp', () => {
+      const store = useScrollItemsStore()
+      store.setIsPaused(true)
+      store.savePausedPosition('test-id', 100)
+      
+      store.setIsPaused(false)
+      
+      expect(store.isPaused).toBe(false)
+      expect(store.pauseTimestamp).toBeNull()
+      expect(store.pausedPositions.size).toBe(0)
+    })
+    
+    it('should toggle pause state correctly', () => {
+      const store = useScrollItemsStore()
+      
+      expect(store.isPaused).toBe(false)
+      
+      store.togglePause()
+      expect(store.isPaused).toBe(true)
+      
+      store.togglePause()
+      expect(store.isPaused).toBe(false)
+    })
+    
+    it('should save and retrieve paused positions', () => {
+      const store = useScrollItemsStore()
+      
+      store.savePausedPosition('item-1', 100)
+      store.savePausedPosition('item-2', 200)
+      
+      expect(store.getPausedPositionX('item-1')).toBe(100)
+      expect(store.getPausedPositionX('item-2')).toBe(200)
+      expect(store.getPausedPositionX('item-3')).toBeUndefined()
+    })
+    
+    it('should clear all paused positions', () => {
+      const store = useScrollItemsStore()
+      
+      store.savePausedPosition('item-1', 100)
+      store.savePausedPosition('item-2', 200)
+      
+      store.clearPausedPositions()
+      
+      expect(store.pausedPositions.size).toBe(0)
+      expect(store.getPausedPositionX('item-1')).toBeUndefined()
+      expect(store.getPausedPositionX('item-2')).toBeUndefined()
+    })
+    
+    it('should maintain PAUSE state independent of speed changes', () => {
+      const store = useScrollItemsStore()
+      
+      store.setIsPaused(true)
+      const originalPauseState = store.isPaused
+      
+      store.updateGlobalVelocity(150)
+      
+      expect(store.isPaused).toBe(originalPauseState)
+      expect(store.globalVelocity).toBe(150)
+    })
+    
+    it('should maintain PAUSE state independent of text visibility changes', () => {
+      const store = useScrollItemsStore()
+      
+      store.setIsPaused(true)
+      const originalPauseState = store.isPaused
+      
+      store.toggleTexts()
+      
+      expect(store.isPaused).toBe(originalPauseState)
     })
   })
 })

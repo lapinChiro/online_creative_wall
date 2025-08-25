@@ -92,6 +92,8 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     if (index !== -1) {
       items.value.splice(index, 1)
       itemsMap.value.delete(id)
+      // R-002対策: メモリリーク防止のため、pausedPositionsからも削除
+      pausedPositions.value.delete(id)
     }
   }
   
@@ -102,7 +104,11 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
   function removeItems(ids: string[]): void {
     const idSet = new Set(ids)
     items.value = items.value.filter(item => !idSet.has(item.id))
-    ids.forEach(id => itemsMap.value.delete(id))
+    ids.forEach(id => {
+      itemsMap.value.delete(id)
+      // R-002対策: メモリリーク防止のため、pausedPositionsからも削除
+      pausedPositions.value.delete(id)
+    })
   }
   
   /**
@@ -223,6 +229,8 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
   function clearItems(): void {
     items.value = []
     itemsMap.value.clear()
+    // R-002対策: メモリリーク防止のため、pausedPositionsもクリア
+    pausedPositions.value.clear()
   }
   
   /**
@@ -302,12 +310,21 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
    * @param value 一時停止するかどうか
    */
   function setIsPaused(value: boolean): void {
+    const startTime = performance.now()
     isPaused.value = value
     if (value) {
       pauseTimestamp.value = Date.now()
+      if (import.meta.env.DEV) {
+        const elapsed = performance.now() - startTime
+        console.log(`[PAUSE Performance] Pause operation completed in ${elapsed.toFixed(2)}ms`)
+      }
     } else {
       pauseTimestamp.value = null
       clearPausedPositions()
+      if (import.meta.env.DEV) {
+        const elapsed = performance.now() - startTime
+        console.log(`[PAUSE Performance] Resume operation completed in ${elapsed.toFixed(2)}ms`)
+      }
     }
   }
   

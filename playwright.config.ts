@@ -57,13 +57,12 @@ export default defineConfig({
         ...devices['Desktop Firefox'],
       },
     },
-    // WebKit is temporarily disabled due to environment issues
-    // {
-    //   name: 'webkit',
-    //   use: {
-    //     ...devices['Desktop Safari'],
-    //   },
-    // },
+    {
+      name: 'webkit',
+      use: {
+        ...devices['Desktop Safari'],
+      },
+    },
 
     /* Test against mobile viewports. */
     // {
@@ -80,12 +79,12 @@ export default defineConfig({
     // },
 
     /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: {
-    //     channel: 'msedge',
-    //   },
-    // },
+    {
+      name: 'Microsoft Edge',
+      use: {
+        ...devices['Desktop Edge'],
+      },
+    },
     // {
     //   name: 'Google Chrome',
     //   use: {

@@ -46,10 +46,27 @@ export function useScrollAnimationWorker(
   watch(() => store.isPaused, (isPaused, wasPaused) => {
     if (isPaused && !wasPaused) {
       // 一時停止時: 現在のtranslateX位置を保存
+      // R-001対策: getComputedStyleで正確な位置を取得
       const visibleItems = store.visibleItems
       visibleItems.forEach(item => {
-        // 現在のX座標をtranslateX値として保存
-        store.savePausedPosition(item.id, item.position.x)
+        // DOM要素から正確な位置を取得
+        const element = document.querySelector(`[data-item-id="${item.id}"]`)
+        if (element instanceof HTMLElement) {
+          const computed = window.getComputedStyle(element)
+          const transform = computed.transform
+          
+          if (transform !== 'none') {
+            const matrix = new DOMMatrix(transform)
+            const accurateX = matrix.m41 // translateX値
+            store.savePausedPosition(item.id, accurateX)
+          } else {
+            // フォールバック: 既存の位置を使用
+            store.savePausedPosition(item.id, item.position.x)
+          }
+        } else {
+          // フォールバック: 既存の位置を使用
+          store.savePausedPosition(item.id, item.position.x)
+        }
       })
     } else if (!isPaused && wasPaused) {
       // 再開時: 保存された位置から再開
