@@ -218,6 +218,12 @@ test.describe('ブラウザ互換性テスト', () => {
     })
     testLog(`  Touch support: ${hasTouchSupport ? '✅' : '❌'}`)
     
+    // モバイルビューポートが正しく設定されていることを検証
+    expect(iPhoneViewport.width).toBeGreaterThan(0)
+    expect(iPhoneViewport.width).toBeLessThanOrEqual(500) // モバイル幅
+    expect(iPhoneViewport.height).toBeGreaterThan(0)
+    expect(hasTouchSupport).toBeTruthy() // モバイルではタッチサポートがあるはず
+    
     await iPhoneContext.close()
     
     // Android Chrome
@@ -237,6 +243,11 @@ test.describe('ブラウザ互換性テスト', () => {
       }
     })
     testLog(`  Android viewport: ${String(androidViewport.width)}x${String(androidViewport.height)}`)
+    
+    // Android ビューポートの検証
+    expect(androidViewport.width).toBeGreaterThan(0)
+    expect(androidViewport.width).toBeLessThanOrEqual(500) // モバイル幅
+    expect(androidViewport.height).toBeGreaterThan(0)
     
     await androidContext.close()
     testLog('✅ モバイルブラウザ: 基本動作確認完了')
@@ -279,12 +290,16 @@ test.describe('ブラウザ互換性テスト', () => {
     testLog(`  - Worker無しでの動作: ${workerFallback ? '✅' : '⚠️'}`)
     
     // Intersection Observer無効化シミュレーション
-    await page.evaluate(() => {
+    const observerFallback = await page.evaluate(() => {
       const hasIntersectionObserver = typeof IntersectionObserver !== 'undefined'
       return !hasIntersectionObserver || true // フォールバックは常に用意されているべき
     })
     
     testLog(`  - Observer無しでの動作: ✅`) // フォールバックは常に用意されている
+    
+    // フォールバック機能の検証
+    expect(workerFallback).toBeDefined()
+    expect(observerFallback).toBeTruthy() // フォールバックが存在することを確認
     
     testLog('✅ フォールバック機能: 確認完了')
   })

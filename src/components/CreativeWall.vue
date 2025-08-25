@@ -329,8 +329,8 @@ const handleResize = (): void => {
 
 // キーボードイベントハンドラー
 const handleKeyDown = (event: KeyboardEvent): void => {
-  // スペースキー（keyCode=32 または key=' '）かつテキスト入力フィールドにフォーカスがない
-  if ((event.keyCode === 32 || event.key === ' ') && 
+  // スペースキー（key=' '）かつテキスト入力フィールドにフォーカスがない
+  if (event.key === ' ' && 
       !(event.target instanceof HTMLInputElement || 
         event.target instanceof HTMLTextAreaElement)) {
     event.preventDefault() // ページスクロールを防ぐ

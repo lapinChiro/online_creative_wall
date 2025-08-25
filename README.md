@@ -15,7 +15,7 @@
 
 ### 前提条件
 
-- Node.js 16.x以上
+- Node.js 20.19.0以上 または 22.12.0以上
 - npm または yarn
 
 ### セットアップ
@@ -24,7 +24,7 @@
 
 ```bash
 git clone <repository-url>
-cd creative-wall-vue
+cd online_creative_wall
 ```
 
 2. **依存関係のインストール**

@@ -4,9 +4,9 @@ import { test, expect, type Page } from '@playwright/test'
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
   // アプリケーションが完全に読み込まれるまで待機
-  await page.waitForSelector('.blackboard', { state: 'visible' })
+  await page.locator('.blackboard').waitFor({ state: 'visible' })
   // アイテムが表示されるまで待機
-  await page.waitForSelector('.scroll-item', { state: 'visible' })
+  await page.locator('.scroll-item').first().waitFor({ state: 'visible' })
 })
 
 test.describe('PAUSE Functionality', () => {
@@ -25,7 +25,7 @@ test.describe('PAUSE Functionality', () => {
     await expect(page.locator('#pause-button .pause-icon')).toContainText('▶')
     
     // 50ms待機
-    await page.waitForTimeout(50)
+    await page.waitForTimeout(50) // eslint-disable-line playwright/no-wait-for-timeout
     
     // アイテムの位置を再度取得
     const itemsAfter = await getItemPositions(page)
@@ -33,7 +33,8 @@ test.describe('PAUSE Functionality', () => {
     // 位置が変わっていないことを確認（50ms以内に停止）
     expect(itemsBefore.length).toEqual(itemsAfter.length)
     itemsBefore.forEach((pos, index) => {
-      const diff = Math.abs(itemsAfter[index] - pos)
+      const afterPos = itemsAfter[index]
+      const diff = Math.abs(afterPos - pos)
       expect(diff).toBeLessThan(5) // 許容誤差5px以内
     })
   })
@@ -41,7 +42,7 @@ test.describe('PAUSE Functionality', () => {
   test('AC-002: 再生ボタンクリックで停止位置から再開', async ({ page }) => {
     // PAUSEボタンをクリック
     await page.locator('#pause-button').click()
-    await page.waitForTimeout(100)
+    await page.waitForTimeout(100) // eslint-disable-line playwright/no-wait-for-timeout
     
     // 停止時の位置を記録
     const pausedPositions = await getItemPositions(page)
@@ -53,14 +54,15 @@ test.describe('PAUSE Functionality', () => {
     await expect(page.locator('#pause-button .pause-icon')).toContainText('⏸')
     
     // 100ms待機してアニメーションが再開したことを確認
-    await page.waitForTimeout(100)
+    await page.waitForTimeout(100) // eslint-disable-line playwright/no-wait-for-timeout
     
     const resumedPositions = await getItemPositions(page)
     
     // 位置が変わっていることを確認（アニメーション再開）
     let moved = false
     pausedPositions.forEach((pos, index) => {
-      if (Math.abs(resumedPositions[index] - pos) > 5) {
+      const resumedPos = resumedPositions[index]
+      if (Math.abs(resumedPos - pos) > 5) {
         moved = true
       }
     })
@@ -149,11 +151,11 @@ test.describe('PAUSE Functionality', () => {
   
   test('位置のズレが±5px以内', async ({ page }) => {
     // アイテムの初期位置を記録
-    const initialPositions = await getItemPositions(page)
+    await getItemPositions(page) // 初期位置を確認（使用しない）
     
     // PAUSEボタンをクリック
     await page.locator('#pause-button').click()
-    await page.waitForTimeout(100)
+    await page.waitForTimeout(100) // eslint-disable-line playwright/no-wait-for-timeout
     
     // 停止時の位置を記録
     const pausedPositions = await getItemPositions(page)
@@ -243,7 +245,7 @@ async function getItemPositions(page: Page): Promise<number[]> {
   
   for (const item of items) {
     const box = await item.boundingBox()
-    if (box) {
+    if (box !== null) {
       positions.push(box.x)
     }
   }

@@ -3,6 +3,8 @@
  * PAUSE機能で使用する主要APIの互換性を確認
  */
 
+import { hasQuerySelector, getNavigatorVendor } from './deprecatedAPIs'
+
 export interface BrowserCompatibilityResult {
   compatible: boolean
   features: {
@@ -35,7 +37,7 @@ export function checkBrowserCompatibility(): BrowserCompatibilityResult {
     requestAnimationFrame: typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function',
     Map: typeof Map !== 'undefined',
     performanceNow: typeof performance !== 'undefined' && typeof performance.now === 'function',
-    querySelector: typeof document !== 'undefined' && typeof document.querySelector === 'function'
+    querySelector: hasQuerySelector()
   }
   
   // 警告メッセージの生成
@@ -65,9 +67,9 @@ export function checkBrowserCompatibility(): BrowserCompatibilityResult {
   
   // ブラウザ情報の取得
   const browserInfo = {
-    userAgent: navigator.userAgent || 'unknown',
-    vendor: navigator.vendor || 'unknown',
-    language: navigator.language || 'unknown'
+    userAgent: navigator.userAgent !== '' ? navigator.userAgent : 'unknown',
+    vendor: getNavigatorVendor(),
+    language: navigator.language !== '' ? navigator.language : 'unknown'
   }
   
   // 全体的な互換性判定（必須機能が全て利用可能か）
@@ -94,8 +96,12 @@ export function getDOMMatrixPolyfill(): typeof DOMMatrix {
   }
   
   // WebKitCSSMatrixをフォールバックとして使用（Safari向け）
-  if (typeof (window as any).WebKitCSSMatrix !== 'undefined') {
-    return (window as any).WebKitCSSMatrix
+  interface WindowWithWebKit extends Window {
+    WebKitCSSMatrix?: new (transform?: string) => { m41: number }
+  }
+  const windowWithWebKit = window as unknown as WindowWithWebKit
+  if (typeof windowWithWebKit.WebKitCSSMatrix !== 'undefined') {
+    return windowWithWebKit.WebKitCSSMatrix as unknown as typeof DOMMatrix
   }
   
   // 簡易的なポリフィル実装
@@ -103,10 +109,10 @@ export function getDOMMatrixPolyfill(): typeof DOMMatrix {
     m41: number = 0
     
     constructor(transform?: string) {
-      if (transform && transform !== 'none') {
+      if (transform !== undefined && transform !== '' && transform !== 'none') {
         // matrix(a, b, c, d, tx, ty) または matrix3d からtranslateXを抽出
         const match = transform.match(/matrix\(([^)]+)\)/)
-        if (match && match[1]) {
+        if (match !== null && match[1] !== undefined) {
           const values = match[1].split(',').map(v => parseFloat(v.trim()))
           if (values.length >= 5) {
             const translateX = values[4]
@@ -117,7 +123,7 @@ export function getDOMMatrixPolyfill(): typeof DOMMatrix {
         }
       }
     }
-  } as any
+  } as unknown as typeof DOMMatrix
 }
 
 /**
@@ -172,19 +178,19 @@ export function checkMinimumBrowserVersions(): {
   
   // Chrome 90+
   const chromeMatch = ua.match(/chrome\/(\d+)/)
-  const chrome = chromeMatch && chromeMatch[1] ? parseInt(chromeMatch[1]) >= 90 : false
+  const chrome = chromeMatch !== null && chromeMatch[1] !== undefined ? parseInt(chromeMatch[1]) >= 90 : false
   
   // Firefox 88+
   const firefoxMatch = ua.match(/firefox\/(\d+)/)
-  const firefox = firefoxMatch && firefoxMatch[1] ? parseInt(firefoxMatch[1]) >= 88 : false
+  const firefox = firefoxMatch !== null && firefoxMatch[1] !== undefined ? parseInt(firefoxMatch[1]) >= 88 : false
   
   // Safari 14+
   const safariMatch = ua.match(/version\/(\d+).*safari/)
-  const safari = safariMatch && safariMatch[1] ? parseInt(safariMatch[1]) >= 14 : false
+  const safari = safariMatch !== null && safariMatch[1] !== undefined ? parseInt(safariMatch[1]) >= 14 : false
   
   // Edge 90+
   const edgeMatch = ua.match(/edg\/(\d+)/)
-  const edge = edgeMatch && edgeMatch[1] ? parseInt(edgeMatch[1]) >= 90 : false
+  const edge = edgeMatch !== null && edgeMatch[1] !== undefined ? parseInt(edgeMatch[1]) >= 90 : false
   
   return { chrome, firefox, safari, edge }
 }

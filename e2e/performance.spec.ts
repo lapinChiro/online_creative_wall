@@ -82,11 +82,18 @@ async function measurePerformance(page: Page, duration: number = 5000): Promise<
     }
     
     // 平均FPSを計算
-    results.fps = fpsValues.length > 0 
+    const avgFps = fpsValues.length > 0 
       ? fpsValues.reduce((a, b) => a + b, 0) / fpsValues.length 
       : 0
     
-    return results
+    return {
+      fps: avgFps,
+      memoryUsage: results.memoryUsage,
+      domNodes: results.domNodes,
+      jsHeapSize: results.jsHeapSize,
+      renderTime: results.renderTime,
+      scriptDuration: results.scriptDuration
+    }
   }, duration)
   
   return metrics
@@ -138,7 +145,11 @@ test.describe('Creative Wall パフォーマンステスト', () => {
   test('アニメーションパフォーマンス（50アイテム）', async ({ page }) => {
     // 50アイテムに設定
     await page.locator('#post-count').fill('50')
-    await page.waitForTimeout(1000) // アイテム生成を待つ
+    // 50アイテムが生成されるまで待つ
+    await page.waitForFunction(() => {
+      const items = document.querySelectorAll('.scroll-item')
+      return items.length >= 50
+    }, { timeout: 3000 })
     
     // 5秒間のパフォーマンスを測定
     testLog('📊 アニメーションパフォーマンス測定中...')
@@ -160,7 +171,11 @@ test.describe('Creative Wall パフォーマンステスト', () => {
   test('高負荷パフォーマンス（100アイテム）', async ({ page }) => {
     // 100アイテムに設定
     await page.locator('#post-count').fill('100')
-    await page.waitForTimeout(2000) // アイテム生成を待つ
+    // 100アイテムが生成されるまで待つ
+    await page.waitForFunction(() => {
+      const items = document.querySelectorAll('.scroll-item')
+      return items.length >= 100
+    }, { timeout: 5000 })
     
     // 5秒間のパフォーマンスを測定
     testLog('📊 高負荷パフォーマンス測定中...')
@@ -184,7 +199,11 @@ test.describe('Creative Wall パフォーマンステスト', () => {
     for (const speed of speeds) {
       // スピードを設定
       await page.locator('#scroll-speed').fill(speed.toString())
-      await page.waitForTimeout(1000)
+      // スピード値が反映されるまで待つ
+      await page.waitForFunction((expectedSpeed) => {
+        const speedInput = document.querySelector('#scroll-speed')
+        return speedInput instanceof HTMLInputElement && speedInput.value === expectedSpeed.toString()
+      }, speed, { timeout: 2000 })
       
       // パフォーマンス測定
       testLog(`📊 スピード ${String(speed)}% で測定中...`)

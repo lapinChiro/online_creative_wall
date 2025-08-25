@@ -8,10 +8,15 @@
 
 // type LogLevel = 'debug' | 'info' | 'warn' | 'error' // 将来的に使用予定
 
+// Vite環境チェック用の型ガード
+function hasViteEnv(meta: ImportMeta): meta is ImportMeta & { env: { DEV: boolean } } {
+  return 'env' in meta && typeof (meta as { env?: { DEV?: boolean } }).env?.DEV === 'boolean'
+}
+
 // 環境判定の明確な分離
 function isDevelopmentEnvironment(): boolean {
   // ブラウザ環境（Vite）
-  if (typeof import.meta !== 'undefined' && import.meta.env) {
+  if (typeof import.meta !== 'undefined' && hasViteEnv(import.meta)) {
     return import.meta.env.DEV
   }
   

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
+import { testLog } from '../src/utils/logger'
 
 /**
  * PAUSE機能 統合テスト
@@ -6,7 +7,15 @@ import { test, expect, type Page } from '@playwright/test'
  */
 
 // ヘルパー関数：Piniaストアの状態を取得（UIから推測）
-async function getStoreState(page: Page) {
+async function getStoreState(page: Page): Promise<{
+  isPaused: boolean
+  pausedPositionsSize: number
+  pauseTimestamp: number | null
+  itemCount: number
+  globalVelocity: number
+  showTexts: boolean
+  iconState: string | null
+}> {
   // UIの状態から内部状態を推測
   const pauseButton = page.locator('#pause-button')
   const ariaPressed = await pauseButton.getAttribute('aria-pressed')
@@ -29,7 +38,11 @@ async function getStoreState(page: Page) {
 }
 
 // ヘルパー関数：パフォーマンスメトリクスを取得
-async function getPerformanceMetrics(page: Page) {
+async function getPerformanceMetrics(page: Page): Promise<{
+  avgFrameDuration: number
+  estimatedFPS: number
+  frameCount: number
+}> {
   return await page.evaluate(() => {
     const entries = performance.getEntriesByType('measure')
     const frameEntries = entries.filter(e => e.name.includes('frame'))
@@ -60,19 +73,27 @@ test.describe('PAUSE機能 統合テスト', () => {
     await page.goto('/')
     await page.waitForSelector('.blackboard', { state: 'visible' })
     await page.waitForSelector('.scroll-item', { state: 'visible' })
-    await page.waitForTimeout(1000) // アニメーション安定化待機
+    // アニメーションが開始されていることを確認
+    await page.waitForFunction(() => {
+      const item = document.querySelector('.scroll-item')
+      if (!(item instanceof HTMLElement)) {
+        return false
+      }
+      const transform = item.style.transform
+      return transform !== '' && transform.includes('translateX')
+    }, { timeout: 3000 })
   })
 
   test('統合シナリオ: 完全な操作フロー', async ({ page }) => {
-    console.log('=== PAUSE機能 統合テスト開始 ===')
+    testLog('=== PAUSE機能 統合テスト開始 ===')
     
     // 1. 初期状態の確認
-    console.log('1. 初期状態の確認')
+    testLog('1. 初期状態の確認')
     const initialState = await getStoreState(page)
     expect(initialState).not.toBeNull()
-    expect(initialState!.isPaused).toBe(false)
-    expect(initialState!.pauseTimestamp).toBeNull()
-    expect(initialState!.pausedPositionsSize).toBe(0)
+    expect(initialState.isPaused).toBe(false)
+    expect(initialState.pauseTimestamp).toBeNull()
+    expect(initialState.pausedPositionsSize).toBe(0)
     
     const pauseButton = page.locator('#pause-button')
     await expect(pauseButton).toBeVisible()
@@ -80,7 +101,7 @@ test.describe('PAUSE機能 統合テスト', () => {
     await expect(pauseButton.locator('.pause-icon')).toContainText('⏸')
     
     // 2. PAUSE機能の基本動作
-    console.log('2. PAUSE機能の基本動作テスト')
+    testLog('2. PAUSE機能の基本動作テスト')
     
     // PAUSEボタンクリック
     await pauseButton.click()
@@ -88,9 +109,9 @@ test.describe('PAUSE機能 統合テスト', () => {
     
     // 状態変更の確認
     const pausedState = await getStoreState(page)
-    expect(pausedState!.isPaused).toBe(true)
-    expect(pausedState!.pauseTimestamp).not.toBeNull()
-    expect(pausedState!.pausedPositionsSize).toBeGreaterThan(0)
+    expect(pausedState.isPaused).toBe(true)
+    expect(pausedState.pauseTimestamp).not.toBeNull()
+    expect(pausedState.pausedPositionsSize).toBeGreaterThan(0)
     
     await expect(pauseButton).toHaveAttribute('aria-pressed', 'true')
     await expect(pauseButton.locator('.pause-icon')).toContainText('▶')
@@ -100,18 +121,18 @@ test.describe('PAUSE機能 統合テスト', () => {
     await page.waitForTimeout(100)
     
     const resumedState = await getStoreState(page)
-    expect(resumedState!.isPaused).toBe(false)
-    expect(resumedState!.pauseTimestamp).toBeNull()
+    expect(resumedState.isPaused).toBe(false)
+    expect(resumedState.pauseTimestamp).toBeNull()
     
     // 3. キーボードショートカットテスト
-    console.log('3. キーボードショートカットテスト')
+    testLog('3. キーボードショートカットテスト')
     
     // スペースキーでPAUSE
     await page.keyboard.press(' ')
     await page.waitForTimeout(100)
     
     const spaceKeyPausedState = await getStoreState(page)
-    expect(spaceKeyPausedState!.isPaused).toBe(true)
+    expect(spaceKeyPausedState.isPaused).toBe(true)
     await expect(pauseButton.locator('.pause-icon')).toContainText('▶')
     
     // スペースキーで再生
@@ -119,11 +140,11 @@ test.describe('PAUSE機能 統合テスト', () => {
     await page.waitForTimeout(100)
     
     const spaceKeyResumedState = await getStoreState(page)
-    expect(spaceKeyResumedState!.isPaused).toBe(false)
+    expect(spaceKeyResumedState.isPaused).toBe(false)
     await expect(pauseButton.locator('.pause-icon')).toContainText('⏸')
     
     // 4. 速度調整との組み合わせテスト
-    console.log('4. 速度調整との組み合わせテスト')
+    testLog('4. 速度調整との組み合わせテスト')
     
     // PAUSEしてから速度変更
     await pauseButton.click()
@@ -135,22 +156,22 @@ test.describe('PAUSE機能 統合テスト', () => {
     
     // PAUSE状態が維持されていることを確認
     const afterSpeedChangeState = await getStoreState(page)
-    expect(afterSpeedChangeState!.isPaused).toBe(true)
-    expect(afterSpeedChangeState!.globalVelocity).toBe(100)
+    expect(afterSpeedChangeState.isPaused).toBe(true)
+    expect(afterSpeedChangeState.globalVelocity).toBe(100)
     
     // 再生して速度が反映されることを確認
     await pauseButton.click()
     await page.waitForTimeout(100)
     
     const resumedWithNewSpeedState = await getStoreState(page)
-    expect(resumedWithNewSpeedState!.isPaused).toBe(false)
-    expect(resumedWithNewSpeedState!.globalVelocity).toBe(100)
+    expect(resumedWithNewSpeedState.isPaused).toBe(false)
+    expect(resumedWithNewSpeedState.globalVelocity).toBe(100)
     
     // 速度を元に戻す
     await speedSlider.fill(originalSpeed)
     
     // 5. テキスト表示切り替えとの組み合わせテスト
-    console.log('5. テキスト表示切り替えとの組み合わせテスト')
+    testLog('5. テキスト表示切り替えとの組み合わせテスト')
     
     // PAUSEしてからテキスト表示切り替え
     await pauseButton.click()
@@ -162,14 +183,14 @@ test.describe('PAUSE機能 統合テスト', () => {
     
     // PAUSE状態が維持されていることを確認
     const afterTextToggleState = await getStoreState(page)
-    expect(afterTextToggleState!.isPaused).toBe(true)
-    expect(afterTextToggleState!.showTexts).toBe(!originalTextState!.showTexts)
+    expect(afterTextToggleState.isPaused).toBe(true)
+    expect(afterTextToggleState.showTexts).toBe(!originalTextState.showTexts)
     
     // 再生
     await pauseButton.click()
     
     // 6. 新規アイテム追加テスト
-    console.log('6. 新規アイテム追加との組み合わせテスト')
+    testLog('6. 新規アイテム追加との組み合わせテスト')
     
     // アイテム数を増やす
     const postCountSlider = page.locator('#post-count')
@@ -184,8 +205,8 @@ test.describe('PAUSE機能 統合テスト', () => {
     await page.waitForTimeout(100)
     
     const afterItemAddState = await getStoreState(page)
-    expect(afterItemAddState!.isPaused).toBe(true)
-    expect(afterItemAddState!.pausedPositionsSize).toBeGreaterThan(0)
+    expect(afterItemAddState.isPaused).toBe(true)
+    expect(afterItemAddState.pausedPositionsSize).toBeGreaterThan(0)
     
     // 再生
     await pauseButton.click()
@@ -194,7 +215,7 @@ test.describe('PAUSE機能 統合テスト', () => {
     await postCountSlider.fill(originalCount)
     
     // 7. 連続操作テスト（ストレステスト）
-    console.log('7. 連続操作ストレステスト')
+    testLog('7. 連続操作ストレステスト')
     
     for (let i = 0; i < 5; i++) {
       await pauseButton.click()
@@ -202,40 +223,40 @@ test.describe('PAUSE機能 統合テスト', () => {
       
       const state = await getStoreState(page)
       expect(state).not.toBeNull()
-      expect(state!.isPaused).toBe(i % 2 === 0)
+      expect(state.isPaused).toBe(i % 2 === 0)
     }
     
     // 最終的に再生状態にする
     const finalState = await getStoreState(page)
-    if (finalState!.isPaused) {
+    if (finalState.isPaused) {
       await pauseButton.click()
     }
     
-    console.log('=== 統合テスト完了 ===')
+    testLog('=== 統合テスト完了 ===')
   })
 
   test('事後条件の確認', async ({ page }) => {
-    console.log('=== 事後条件の確認 ===')
+    testLog('=== 事後条件の確認 ===')
     
     const pauseButton = page.locator('#pause-button')
     
     // 1. isPaused状態の正確性
-    console.log('1. isPaused状態の正確性を確認')
+    testLog('1. isPaused状態の正確性を確認')
     
     // PAUSE状態にする
     await pauseButton.click()
     await page.waitForTimeout(100)
     
     const pausedState = await getStoreState(page)
-    expect(pausedState!.isPaused).toBe(true)
-    expect(pausedState!.pauseTimestamp).not.toBeNull()
-    expect(pausedState!.pauseTimestamp).toBeGreaterThan(Date.now() - 1000)
+    expect(pausedState.isPaused).toBe(true)
+    expect(pausedState.pauseTimestamp).not.toBeNull()
+    expect(pausedState.pauseTimestamp).toBeGreaterThan(Date.now() - 1000)
     
     // 2. アニメーション制御の正確性
-    console.log('2. アニメーション制御の正確性を確認')
+    testLog('2. アニメーション制御の正確性を確認')
     
     // アイテムの位置を取得
-    const getItemPositions = async () => {
+    const getItemPositions = async (): Promise<number[]> => {
       return await page.evaluate(() => {
         const items = document.querySelectorAll('.scroll-item')
         return Array.from(items).map(item => {
@@ -251,7 +272,8 @@ test.describe('PAUSE機能 統合テスト', () => {
     
     // 位置が変わっていないことを確認（誤差5px以内）
     pausedPositions.forEach((pos, index) => {
-      expect(Math.abs(stillPausedPositions[index] - pos)).toBeLessThan(5)
+      const stillPos = stillPausedPositions[index]
+      expect(Math.abs(stillPos - pos)).toBeLessThan(5)
     })
     
     // 再生する
@@ -263,24 +285,25 @@ test.describe('PAUSE機能 統合テスト', () => {
     // 位置が変わっていることを確認
     let moved = false
     pausedPositions.forEach((pos, index) => {
-      if (Math.abs(resumedPositions[index] - pos) > 5) {
+      const resumedPos = resumedPositions[index]
+      if (Math.abs(resumedPos - pos) > 5) {
         moved = true
       }
     })
     expect(moved).toBeTruthy()
     
     // 3. ボタンアイコンの状態反映
-    console.log('3. ボタンアイコンの状態反映を確認')
+    testLog('3. ボタンアイコンの状態反映を確認')
     
     const currentState = await getStoreState(page)
-    const expectedIcon = currentState!.isPaused ? '▶' : '⏸'
-    const expectedPressed = currentState!.isPaused ? 'true' : 'false'
+    const expectedIcon = currentState.isPaused ? '▶' : '⏸'
+    const expectedPressed = currentState.isPaused ? 'true' : 'false'
     
     await expect(pauseButton.locator('.pause-icon')).toContainText(expectedIcon)
     await expect(pauseButton).toHaveAttribute('aria-pressed', expectedPressed)
     
     // 4. ユーザーが次のアクションを実行可能
-    console.log('4. ユーザーが次のアクションを実行可能か確認')
+    testLog('4. ユーザーが次のアクションを実行可能か確認')
     
     // 各コントロールが操作可能であることを確認
     await expect(page.locator('#scroll-speed')).toBeEnabled()
@@ -297,20 +320,20 @@ test.describe('PAUSE機能 統合テスト', () => {
     // 全て正常に動作することを確認
     const finalState = await getStoreState(page)
     expect(finalState).not.toBeNull()
-    expect(finalState!.globalVelocity).toBe(75)
+    expect(finalState.globalVelocity).toBe(75)
     
-    console.log('=== 事後条件確認完了 ===')
+    testLog('=== 事後条件確認完了 ===')
   })
 
   test('パフォーマンス要件の確認（60fps維持）', async ({ page }) => {
-    console.log('=== パフォーマンス要件の確認 ===')
+    testLog('=== パフォーマンス要件の確認 ===')
     
     // アニメーションを数秒間実行してFPSを計測
     await page.waitForTimeout(3000)
     
     // パフォーマンスメトリクスを取得
     const metrics = await getPerformanceMetrics(page)
-    console.log('Performance Metrics:', metrics)
+    testLog('Performance Metrics:', metrics)
     
     // 60fps（16.67ms/frame）に近いことを確認
     // 許容範囲: 50fps以上（20ms/frame以下）
@@ -322,22 +345,28 @@ test.describe('PAUSE機能 統合テスト', () => {
     await page.waitForTimeout(1000)
     
     const pausedMetrics = await page.evaluate(() => {
+      interface PerformanceMemory {
+        usedJSHeapSize: number
+        totalJSHeapSize: number
+        jsHeapSizeLimit: number
+      }
+      const perfMemory = (performance as Performance & { memory?: PerformanceMemory }).memory
       return {
         timestamp: Date.now(),
-        memory: performance.memory ? (performance.memory as any).usedJSHeapSize : 0
+        memory: perfMemory !== undefined ? perfMemory.usedJSHeapSize : 0
       }
     })
     
-    console.log('Paused state metrics:', pausedMetrics)
+    testLog('Paused state metrics:', pausedMetrics)
     
     // 再生
     await page.locator('#pause-button').click()
     
-    console.log('=== パフォーマンス要件確認完了 ===')
+    testLog('=== パフォーマンス要件確認完了 ===')
   })
 
   test('TypeScript型安全性とビルド成功の事前確認', async ({ page }) => {
-    console.log('=== 型安全性とビルドの確認 ===')
+    testLog('=== 型安全性とビルドの確認 ===')
     
     // ランタイムエラーがないことを確認
     const consoleLogs: string[] = []
@@ -364,41 +393,41 @@ test.describe('PAUSE機能 統合テスト', () => {
     // エラーログがないことを確認
     expect(consoleLogs).toHaveLength(0)
     
-    console.log('Runtime errors: None')
-    console.log('Note: TypeScript compilation and build checks should be run separately')
-    console.log('Run: npm run ci && npm run test:unit')
-    console.log('=== 型安全性確認完了 ===')
+    testLog('Runtime errors: None')
+    testLog('Note: TypeScript compilation and build checks should be run separately')
+    testLog('Run: npm run ci && npm run test:unit')
+    testLog('=== 型安全性確認完了 ===')
   })
 
   test('全受け入れ基準（AC-001〜006）の最終確認', async ({ page }) => {
-    console.log('=== 全受け入れ基準の最終確認 ===')
+    testLog('=== 全受け入れ基準の最終確認 ===')
     
     // AC-001: PAUSEボタンクリックで全スクロール停止（50ms以内）
-    console.log('AC-001: PAUSEボタンクリックで停止')
+    testLog('AC-001: PAUSEボタンクリックで停止')
     await page.locator('#pause-button').click()
     await page.waitForTimeout(50) // 停止処理の完了を待つ
     
     const pausedState = await getStoreState(page)
-    expect(pausedState!.isPaused).toBe(true)
+    expect(pausedState.isPaused).toBe(true)
     
     // AC-002: 再生ボタンクリックで停止位置から再開
-    console.log('AC-002: 再生ボタンクリックで再開')
+    testLog('AC-002: 再生ボタンクリックで再開')
     await page.locator('#pause-button').click()
     const resumedState = await getStoreState(page)
-    expect(resumedState!.isPaused).toBe(false)
+    expect(resumedState.isPaused).toBe(false)
     
     // AC-003: スペースキー押下でPAUSE/再生切り替え
-    console.log('AC-003: スペースキーで切り替え')
+    testLog('AC-003: スペースキーで切り替え')
     await page.keyboard.press(' ')
     const spaceState1 = await getStoreState(page)
-    expect(spaceState1!.isPaused).toBe(true)
+    expect(spaceState1.isPaused).toBe(true)
     
     await page.keyboard.press(' ')
     const spaceState2 = await getStoreState(page)
-    expect(spaceState2!.isPaused).toBe(false)
+    expect(spaceState2.isPaused).toBe(false)
     
     // AC-004: アイコン表示が状態に応じて切り替わる
-    console.log('AC-004: アイコン表示切り替え')
+    testLog('AC-004: アイコン表示切り替え')
     const pauseButton = page.locator('#pause-button')
     await expect(pauseButton.locator('.pause-icon')).toContainText('⏸')
     
@@ -409,21 +438,21 @@ test.describe('PAUSE機能 統合テスト', () => {
     await expect(pauseButton.locator('.pause-icon')).toContainText('⏸')
     
     // AC-005: 速度調整との共存（独立動作）
-    console.log('AC-005: 速度調整との独立動作')
+    testLog('AC-005: 速度調整との独立動作')
     await pauseButton.click()
     await page.locator('#scroll-speed').fill('90')
     
     const speedChangeState = await getStoreState(page)
-    expect(speedChangeState!.isPaused).toBe(true)
-    expect(speedChangeState!.globalVelocity).toBe(90)
+    expect(speedChangeState.isPaused).toBe(true)
+    expect(speedChangeState.globalVelocity).toBe(90)
     
     // AC-006: テキスト表示との共存（独立動作）
-    console.log('AC-006: テキスト表示との独立動作')
+    testLog('AC-006: テキスト表示との独立動作')
     await page.locator('.toggle-text-btn').click()
     
     const textToggleState = await getStoreState(page)
-    expect(textToggleState!.isPaused).toBe(true)
+    expect(textToggleState.isPaused).toBe(true)
     
-    console.log('=== 全受け入れ基準確認完了 ===')
+    testLog('=== 全受け入れ基準確認完了 ===')
   })
 })

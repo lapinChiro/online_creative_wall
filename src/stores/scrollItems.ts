@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { ScrollItem } from '@/types/scroll-item'
 import { isImageItem, isTextItem } from '@/types/scroll-item'
+import { createLogger } from '@/utils/logger'
 
 /**
  * アイテムのメタデータ型定義（将来使用予定）
@@ -18,6 +19,7 @@ import { isImageItem, isTextItem } from '@/types/scroll-item'
  * WeakMapによる効率的なメモリ管理とパフォーマンス最適化
  */
 export const useScrollItemsStore = defineStore('scrollItems', () => {
+  const logger = createLogger('ScrollItemsStore')
   // State（最適化版）
   // const itemsSet = ref(new Set<ScrollItem>()) // Set使用で重複排除（将来使用予定）
   const items = ref<ScrollItem[]>([]) // 通常のrefに戻す（互換性のため）
@@ -316,14 +318,14 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
       pauseTimestamp.value = Date.now()
       if (import.meta.env.DEV) {
         const elapsed = performance.now() - startTime
-        console.log(`[PAUSE Performance] Pause operation completed in ${elapsed.toFixed(2)}ms`)
+        logger.debug(`[PAUSE Performance] Pause operation completed in ${elapsed.toFixed(2)}ms`)
       }
     } else {
       pauseTimestamp.value = null
       clearPausedPositions()
       if (import.meta.env.DEV) {
         const elapsed = performance.now() - startTime
-        console.log(`[PAUSE Performance] Resume operation completed in ${elapsed.toFixed(2)}ms`)
+        logger.debug(`[PAUSE Performance] Resume operation completed in ${elapsed.toFixed(2)}ms`)
       }
     }
   }

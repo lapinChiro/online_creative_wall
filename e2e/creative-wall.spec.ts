@@ -82,7 +82,7 @@ test.describe('Creative Wall E2E Tests', () => {
     const initialPosition = await item.evaluate((el) => {
       const style = window.getComputedStyle(el)
       const xValue = style.getPropertyValue('--x')
-      return parseFloat(xValue) || 0
+      return !isNaN(parseFloat(xValue)) ? parseFloat(xValue) : 0
     })
     
     // アニメーション進行のための待機
@@ -90,7 +90,7 @@ test.describe('Creative Wall E2E Tests', () => {
       const currentPosition = await item.evaluate((el) => {
         const style = window.getComputedStyle(el)
         const xValue = style.getPropertyValue('--x')
-        return parseFloat(xValue) || 0
+        return !isNaN(parseFloat(xValue)) ? parseFloat(xValue) : 0
       })
       expect(currentPosition).not.toBe(initialPosition)
     }).toPass({ timeout: 3000 })
@@ -98,7 +98,7 @@ test.describe('Creative Wall E2E Tests', () => {
     const newPosition = await item.evaluate((el) => {
       const style = window.getComputedStyle(el)
       const xValue = style.getPropertyValue('--x')
-      return parseFloat(xValue) || 0
+      return !isNaN(parseFloat(xValue)) ? parseFloat(xValue) : 0
     })
     
     // 左に移動していることを確認（値が減少）
