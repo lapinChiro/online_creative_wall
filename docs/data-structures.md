@@ -3,6 +3,7 @@
 ## 基本型定義
 
 ### Position
+
 ```typescript
 interface Position {
   x: number
@@ -13,6 +14,7 @@ interface Position {
 ## スクロールアイテム型
 
 ### BaseScrollItem（基底インターフェース）
+
 ```typescript
 interface BaseScrollItem {
   id: string                    // 一意のID
@@ -24,6 +26,7 @@ interface BaseScrollItem {
 ```
 
 ### ImageScrollItem
+
 ```typescript
 interface ImageScrollItem extends BaseScrollItem {
   type: 'image'                 // タイプ識別子
@@ -38,6 +41,7 @@ interface ImageContent {
 ```
 
 ### TextScrollItem
+
 ```typescript
 interface TextScrollItem extends BaseScrollItem {
   type: 'text'                  // タイプ識別子
@@ -52,6 +56,7 @@ interface TextContent {
 ```
 
 ### ScrollItem（Union型）
+
 ```typescript
 type ScrollItem = ImageScrollItem | TextScrollItem
 ```
@@ -73,11 +78,13 @@ export const isTextItem = (item: ScrollItem): item is TextScrollItem => {
 ## 設定値の型
 
 ### ImageSize
+
 ```typescript
 type ImageSize = 'small' | 'medium' | 'large' | 'xlarge'
 ```
 
 ### TextColor
+
 ```typescript
 type TextColor = 'yellow' | 'pink' | 'blue' | 'green' | 'white'
 ```
@@ -85,12 +92,26 @@ type TextColor = 'yellow' | 'pink' | 'blue' | 'green' | 'white'
 ## APIレスポンス型
 
 ### MediaData
+
 ```typescript
+// DataService.tsで定義されているデータ取得後の型
 interface MediaData {
-  id: string
+  images: FetchedImage[]
+  texts: string[]
+}
+
+interface FetchedImage {
   url: string
   title: string
-  type?: 'image' | 'text'
+}
+```
+
+### 外部APIレスポンス型（内部処理用）
+
+```typescript
+// 外部APIから返される生データの型
+interface MediaItem {
+  media_url_https?: string
   text?: string
 }
 ```

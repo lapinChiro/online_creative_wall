@@ -43,7 +43,7 @@ cp .env.example .env
 
 `.env`ファイルを編集して、S3上のメディアデータURLを設定：
 
-```
+```txt
 VITE_MEDIA_DATA_URL=https://your-s3-bucket.s3.amazonaws.com/path/to/media_data.json
 ```
 
@@ -108,7 +108,7 @@ npm run test:e2e:ui
 
 ## 📁 プロジェクト構造
 
-```
+```txt
 src/
 ├── components/          # Vueコンポーネント
 │   ├── CreativeWall.vue   # メインコンテナ
@@ -117,20 +117,33 @@ src/
 │   ├── ImageContent.vue   # 画像コンテンツ
 │   └── TextContent.vue    # テキストコンテンツ
 ├── composables/         # ビジネスロジック
-│   ├── useScrollAnimation.ts
-│   ├── useLazyLoad.ts
-│   └── useItemManagement.ts
+│   ├── useScrollAnimation.ts       # スクロールアニメーション
+│   ├── useScrollAnimationWorker.ts # Web Worker連携
+│   ├── useAutoCleanup.ts           # 自動クリーンアップ
+│   └── useVirtualScroll.ts         # 仮想スクロール
 ├── services/           # ドメインロジック
-│   ├── PositionService.ts
-│   └── VelocityService.ts
+│   ├── DataService.ts      # データ取得
+│   ├── PositionService.ts  # 位置計算
+│   └── VelocityService.ts  # 速度計算
 ├── factories/          # オブジェクト生成
 │   ├── ContentFactory.ts
 │   └── ScrollItemFactory.ts
 ├── stores/            # 状態管理（Pinia）
 │   └── scrollItems.ts
 ├── types/             # TypeScript型定義
+│   ├── index.ts           # 基本型定義
+│   └── scroll-item.ts     # スクロールアイテム型
 ├── config/            # 設定ファイル
-└── utils/             # ユーティリティ関数
+│   ├── scroll.config.ts         # スクロール設定
+│   └── performance.config.ts    # パフォーマンス設定
+├── utils/             # ユーティリティ関数
+│   ├── arrayUtils.ts       # 配列操作
+│   ├── logger.ts           # ロギング
+│   ├── ObjectPool.ts       # オブジェクトプール
+│   ├── PositionPool.ts     # 位置情報プール
+│   └── random.ts           # ランダム生成
+└── workers/           # Web Worker
+    └── animation.worker.ts  # アニメーション処理
 ```
 
 ## 🎨 カスタマイズ
