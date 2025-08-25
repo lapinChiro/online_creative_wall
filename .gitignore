@@ -34,3 +34,12 @@ playwright-report/
 
 .env
 temp/
+
+# Generated config files (should not be in root)
+/*.config.js
+/*.config.d.ts
+
+# Backup files
+*.bak
+*.orig
+*~

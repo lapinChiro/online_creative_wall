@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { ref, watch, type Ref } from 'vue'
 import type { ScrollItem } from '@/types/scroll-item'
 import { type PositionService } from '@/services/PositionService'
 import { useScrollItemsStore } from '@/stores/scrollItems'
@@ -30,6 +30,44 @@ export function useScrollAnimation(
   let lastTime = performance.now()
   let frameCount = 0
   let lastFpsUpdate = performance.now()
+  
+  // PAUSE状態の監視と位置保存
+  watch(() => store.isPaused, (isPaused, wasPaused) => {
+    if (isPaused && !wasPaused) {
+      // 一時停止時: 現在のtranslateX位置を保存
+      // R-001対策: getComputedStyleで正確な位置を取得
+      const visibleItems = store.visibleItems
+      visibleItems.forEach(item => {
+        // DOM要素から正確な位置を取得
+        const element = document.querySelector(`[data-item-id="${item.id}"]`)
+        if (element instanceof HTMLElement) {
+          const computed = window.getComputedStyle(element)
+          const transform = computed.transform
+          
+          if (transform !== 'none') {
+            const matrix = new DOMMatrix(transform)
+            const accurateX = matrix.m41 // translateX値
+            store.savePausedPosition(item.id, accurateX)
+          } else {
+            // フォールバック: 既存の位置を使用
+            store.savePausedPosition(item.id, item.position.x)
+          }
+        } else {
+          // フォールバック: 既存の位置を使用
+          store.savePausedPosition(item.id, item.position.x)
+        }
+      })
+    } else if (!isPaused && wasPaused) {
+      // 再開時: 保存された位置から再開
+      const visibleItems = store.visibleItems
+      visibleItems.forEach(item => {
+        const savedX = store.getPausedPositionX(item.id)
+        if (savedX !== undefined) {
+          store.updateItemPositionDirect(item.id, savedX, item.position.y)
+        }
+      })
+    }
+  })
 
   /**
    * バッチで複数アイテムの位置を更新（最適化版）
@@ -109,18 +147,24 @@ export function useScrollAnimation(
   const animate = (currentTime: number): void => {
     if (!isRunning.value) {return}
 
-    const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1) // 最大0.1秒のデルタタイム
-    lastTime = currentTime
+    // PAUSE状態チェック
+    if (!store.isPaused) {
+      const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1) // 最大0.1秒のデルタタイム
+      
+      // FPS更新
+      updateFps(currentTime)
 
-    // FPS更新
-    updateFps(currentTime)
-
-    // 表示中のアイテムのみ処理
-    const visibleItems = store.visibleItems
-    if (visibleItems.length > 0) {
-      updateItemPositions(visibleItems, deltaTime)
+      // 表示中のアイテムのみ処理
+      const visibleItems = store.visibleItems
+      if (visibleItems.length > 0) {
+        updateItemPositions(visibleItems, deltaTime)
+      }
+    } else {
+      // 一時停止中でもFPSは0として更新
+      updateFps(currentTime)
     }
-
+    
+    lastTime = currentTime
     animationFrameId = requestAnimationFrame(animate)
   }
 

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { ScrollItem } from '@/types/scroll-item'
 import { isImageItem, isTextItem } from '@/types/scroll-item'
+import { createLogger } from '@/utils/logger'
 
 /**
  * アイテムのメタデータ型定義（将来使用予定）
@@ -18,6 +19,7 @@ import { isImageItem, isTextItem } from '@/types/scroll-item'
  * WeakMapによる効率的なメモリ管理とパフォーマンス最適化
  */
 export const useScrollItemsStore = defineStore('scrollItems', () => {
+  const logger = createLogger('ScrollItemsStore')
   // State（最適化版）
   // const itemsSet = ref(new Set<ScrollItem>()) // Set使用で重複排除（将来使用予定）
   const items = ref<ScrollItem[]>([]) // 通常のrefに戻す（互換性のため）
@@ -31,6 +33,11 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
   const showTexts = ref(true) // テキストアイテムの表示/非表示
   const boardWidth = ref(0) // ボードの幅
   const boardHeight = ref(0) // ボードの高さ
+  
+  // PAUSE機能の状態
+  const isPaused = ref(false) // 一時停止状態
+  const pausedPositions = ref(new Map<string, number>()) // itemId → translateX値のマップ
+  const pauseTimestamp = ref<number | null>(null) // 一時停止した時刻
   
   // Getters
   const imageItems = computed(() => 
@@ -87,6 +94,8 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     if (index !== -1) {
       items.value.splice(index, 1)
       itemsMap.value.delete(id)
+      // R-002対策: メモリリーク防止のため、pausedPositionsからも削除
+      pausedPositions.value.delete(id)
     }
   }
   
@@ -97,7 +106,11 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
   function removeItems(ids: string[]): void {
     const idSet = new Set(ids)
     items.value = items.value.filter(item => !idSet.has(item.id))
-    ids.forEach(id => itemsMap.value.delete(id))
+    ids.forEach(id => {
+      itemsMap.value.delete(id)
+      // R-002対策: メモリリーク防止のため、pausedPositionsからも削除
+      pausedPositions.value.delete(id)
+    })
   }
   
   /**
@@ -218,6 +231,8 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
   function clearItems(): void {
     items.value = []
     itemsMap.value.clear()
+    // R-002対策: メモリリーク防止のため、pausedPositionsもクリア
+    pausedPositions.value.clear()
   }
   
   /**
@@ -286,6 +301,65 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     showTexts.value = true
     boardWidth.value = 0
     boardHeight.value = 0
+    isPaused.value = false
+    pausedPositions.value.clear()
+    pauseTimestamp.value = null
+  }
+  
+  // PAUSE機能のアクション
+  /**
+   * 一時停止状態を設定
+   * @param value 一時停止するかどうか
+   */
+  function setIsPaused(value: boolean): void {
+    const startTime = performance.now()
+    isPaused.value = value
+    if (value) {
+      pauseTimestamp.value = Date.now()
+      if (import.meta.env.DEV) {
+        const elapsed = performance.now() - startTime
+        logger.debug(`[PAUSE Performance] Pause operation completed in ${elapsed.toFixed(2)}ms`)
+      }
+    } else {
+      pauseTimestamp.value = null
+      clearPausedPositions()
+      if (import.meta.env.DEV) {
+        const elapsed = performance.now() - startTime
+        logger.debug(`[PAUSE Performance] Resume operation completed in ${elapsed.toFixed(2)}ms`)
+      }
+    }
+  }
+  
+  /**
+   * 一時停止状態をトグル
+   */
+  function togglePause(): void {
+    setIsPaused(!isPaused.value)
+  }
+  
+  /**
+   * アイテムの一時停止位置を保存
+   * @param itemId アイテムID
+   * @param translateX X座標のtranslate値
+   */
+  function savePausedPosition(itemId: string, translateX: number): void {
+    pausedPositions.value.set(itemId, translateX)
+  }
+  
+  /**
+   * アイテムの一時停止位置を取得
+   * @param itemId アイテムID
+   * @returns 保存されているtranslateX値（ない場合はundefined）
+   */
+  function getPausedPositionX(itemId: string): number | undefined {
+    return pausedPositions.value.get(itemId)
+  }
+  
+  /**
+   * すべての一時停止位置をクリア
+   */
+  function clearPausedPositions(): void {
+    pausedPositions.value.clear()
   }
   
   return {
@@ -296,6 +370,9 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     showTexts,
     boardWidth,
     boardHeight,
+    isPaused,
+    pausedPositions,
+    pauseTimestamp,
     
     // Getters
     imageItems,
@@ -326,6 +403,13 @@ export const useScrollItemsStore = defineStore('scrollItems', () => {
     getItemById,
     getItemsByType,
     updateAllVelocities,
-    $reset
+    $reset,
+    
+    // PAUSE Actions
+    setIsPaused,
+    togglePause,
+    savePausedPosition,
+    getPausedPositionX,
+    clearPausedPositions
   }
 })

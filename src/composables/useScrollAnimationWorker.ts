@@ -1,4 +1,4 @@
-import { ref, type Ref } from 'vue'
+import { ref, watch, type Ref } from 'vue'
 import { type PositionService } from '@/services/PositionService'
 import { useScrollItemsStore } from '@/stores/scrollItems'
 import { calculateBoardSize, SCROLL_CONFIG } from '@/config/scroll.config'
@@ -41,6 +41,44 @@ export function useScrollAnimationWorker(
   let lastFpsUpdate = performance.now()
   let worker: Worker | null = null
   let pendingUpdate = false
+  
+  // PAUSE状態の監視と位置保存
+  watch(() => store.isPaused, (isPaused, wasPaused) => {
+    if (isPaused && !wasPaused) {
+      // 一時停止時: 現在のtranslateX位置を保存
+      // R-001対策: getComputedStyleで正確な位置を取得
+      const visibleItems = store.visibleItems
+      visibleItems.forEach(item => {
+        // DOM要素から正確な位置を取得
+        const element = document.querySelector(`[data-item-id="${item.id}"]`)
+        if (element instanceof HTMLElement) {
+          const computed = window.getComputedStyle(element)
+          const transform = computed.transform
+          
+          if (transform !== 'none') {
+            const matrix = new DOMMatrix(transform)
+            const accurateX = matrix.m41 // translateX値
+            store.savePausedPosition(item.id, accurateX)
+          } else {
+            // フォールバック: 既存の位置を使用
+            store.savePausedPosition(item.id, item.position.x)
+          }
+        } else {
+          // フォールバック: 既存の位置を使用
+          store.savePausedPosition(item.id, item.position.x)
+        }
+      })
+    } else if (!isPaused && wasPaused) {
+      // 再開時: 保存された位置から再開
+      const visibleItems = store.visibleItems
+      visibleItems.forEach(item => {
+        const savedX = store.getPausedPositionX(item.id)
+        if (savedX !== undefined) {
+          store.updateItemPositionDirect(item.id, savedX, item.position.y)
+        }
+      })
+    }
+  })
   
   /**
    * Workerの初期化
@@ -160,38 +198,44 @@ export function useScrollAnimationWorker(
   const animate = (currentTime: number): void => {
     if (!isRunning.value) {return}
     
-    const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1)
-    lastTime = currentTime
-    
-    // FPS更新
-    updateFps(currentTime)
-    
-    // Worker使用可能かつ前回の更新が完了している場合のみ処理
-    if (worker !== null && !pendingUpdate && workerStatus.value === 'ready') {
-      const visibleItems = store.visibleItems
+    // PAUSE状態チェック
+    if (!store.isPaused) {
+      const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1)
       
-      if (visibleItems.length > 0) {
-        pendingUpdate = true
+      // FPS更新
+      updateFps(currentTime)
+      
+      // Worker使用可能かつ前回の更新が完了している場合のみ処理
+      if (worker !== null && !pendingUpdate && workerStatus.value === 'ready') {
+        const visibleItems = store.visibleItems
         
-        // Workerに位置計算を依頼
-        worker.postMessage({
-          type: 'updateBatch',
-          data: {
-            items: visibleItems.map(item => ({
-              id: item.id,
-              position: { x: item.position.x, y: item.position.y },
-              velocity: item.velocity,
-              type: item.type,
-              content: item.content
-            })),
-            deltaTime,
-            batchSize: SCROLL_CONFIG.animation.batchSize,
-            maxItems: SCROLL_CONFIG.performance.maxConcurrentAnimations
-          }
-        })
+        if (visibleItems.length > 0) {
+          pendingUpdate = true
+          
+          // Workerに位置計算を依頼
+          worker.postMessage({
+            type: 'updateBatch',
+            data: {
+              items: visibleItems.map(item => ({
+                id: item.id,
+                position: { x: item.position.x, y: item.position.y },
+                velocity: item.velocity,
+                type: item.type,
+                content: item.content
+              })),
+              deltaTime,
+              batchSize: SCROLL_CONFIG.animation.batchSize,
+              maxItems: SCROLL_CONFIG.performance.maxConcurrentAnimations
+            }
+          })
+        }
       }
+    } else {
+      // 一時停止中でもFPSは0として更新
+      updateFps(currentTime)
     }
     
+    lastTime = currentTime
     animationFrameId = requestAnimationFrame(animate)
   }
   

@@ -33,7 +33,7 @@
     "ci": "npm run type-check:strict && npm run build",
     "ci:full": "npm run type-check:strict && npm run lint:strict && npm run test:unit:coverage && npm run build",
     "ci:pre-commit": "npm run type-check:strict && npm run build",
-    "quality:report": "npm run type-check:strict 2>&1 | tail -1 && npm run lint 2>&1 | tail -1"
+    "quality:report": "echo '=== Quality Report ===' && echo && echo '📋 Type Check:' && npm run type-check:strict 2>&1 | tail -2 && echo && echo '📋 Lint Check:' && npm run lint 2>&1 | tail -2 && echo && echo '📋 Test Coverage:' && npm run test:unit -- --coverage 2>&1 | tail -5 || echo 'Test coverage not configured'"
   },
   "dependencies": {
     "pinia": "^3.0.3",
