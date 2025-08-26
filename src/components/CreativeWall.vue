@@ -17,6 +17,27 @@
           {{ isPaused ? '▶' : '⏸' }}
         </span>
       </button>
+      <button
+        v-if="isPaused"
+        class="download-button"
+        role="button"
+        aria-label="画像をダウンロード"
+        tabindex="0"
+        :disabled="isCapturing"
+        @click="handleDownload"
+        @keydown.enter.prevent="handleDownload"
+        @keydown.space.prevent="handleDownload"
+      >
+        <span
+          v-if="!isCapturing"
+          class="download-icon"
+        >⬇</span>
+        <span
+          v-else
+          class="loading-spinner"
+        >⏳</span>
+        <span class="download-text">{{ isCapturing ? '処理中...' : 'PNG保存' }}</span>
+      </button>
       <button 
         class="toggle-text-btn"
         @click="scrollItemsStore.toggleTexts()"
@@ -50,6 +71,26 @@
         <span class="speed-display">{{ scrollItemsStore.globalVelocity }}%</span>
       </div>
     </div>
+    <!-- Download Notification -->
+    <transition name="notification-fade">
+      <div
+        v-if="captureError || downloadSuccess"
+        class="notification"
+        :class="{ 'error-notification': captureError, 'success-notification': downloadSuccess }"
+        role="alert"
+        :aria-live="captureError ? 'assertive' : 'polite'"
+      >
+        <span class="notification-icon">{{ captureError ? '⚠️' : '✅' }}</span>
+        <span class="notification-text">{{ captureError || downloadSuccess }}</span>
+        <button
+          class="notification-close"
+          aria-label="閉じる"
+          @click="clearNotification"
+        >
+          ×
+        </button>
+      </div>
+    </transition>
     <div class="wall-container">
       <div
         v-if="loading"
@@ -79,6 +120,7 @@ import { useScrollItemsStore } from '@/stores/scrollItems'
 import { useScrollAnimation } from '@/composables/useScrollAnimation'
 import { useScrollAnimationWorker } from '@/composables/useScrollAnimationWorker'
 import { usePauseControl } from '@/composables/usePauseControl'
+import { useCanvasDownload } from '@/composables/useCanvasDownload'
 import { ScrollItemFactory } from '@/factories/ScrollItemFactory'
 import { ContentFactory } from '@/factories/ContentFactory'
 import { PositionService } from '@/services/PositionService'
@@ -101,6 +143,50 @@ const maxDataCount = ref<number>(SCROLL_CONFIG.layout.maxDataCount)
 
 // Initialize PAUSE control
 const { isPaused, toggle: togglePause } = usePauseControl()
+
+// Initialize download functionality
+const { 
+  isCapturing, 
+  captureError, 
+  captureBlackboard, 
+  clearError 
+} = useCanvasDownload()
+
+// Download success notification
+const downloadSuccess = ref<string | null>(null)
+
+// Handle download button click
+const handleDownload = async (): Promise<void> => {
+  // Clear previous notifications
+  downloadSuccess.value = null
+  clearError()
+  
+  // Find the blackboard element
+  const blackboardElement = document.querySelector('.blackboard')
+  
+  if (blackboardElement === null || !(blackboardElement instanceof HTMLElement)) {
+    captureError.value = 'ボード要素が見つかりません'
+    return
+  }
+  
+  // Start capture
+  await captureBlackboard(blackboardElement)
+  
+  // Show success message if no error
+  if (captureError.value === null) {
+    downloadSuccess.value = '画像を保存しました'
+    // Auto-clear success message after 3 seconds
+    setTimeout(() => {
+      downloadSuccess.value = null
+    }, 3000)
+  }
+}
+
+// Clear all notifications
+const clearNotification = (): void => {
+  downloadSuccess.value = null
+  clearError()
+}
 
 // Initialize services and factories immediately
 const boardSize = calculateBoardSize()
@@ -520,6 +606,143 @@ onUnmounted(() => {
 
 .error {
   color: #ff6b6b;
+}
+
+.download-button {
+  padding: 10px 20px;
+  background: rgba(76, 175, 80, 0.9);
+  border: 2px solid #333;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.download-button:hover:not(:disabled) {
+  background: rgba(76, 175, 80, 1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.download-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.download-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.download-button:focus {
+  outline: 2px solid #4CAF50;
+  outline-offset: 2px;
+}
+
+.download-icon,
+.loading-spinner {
+  font-size: 18px;
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 1000;
+  max-width: 400px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.success-notification {
+  background: rgba(76, 175, 80, 0.95);
+  color: white;
+  border: 2px solid #4CAF50;
+}
+
+.error-notification {
+  background: rgba(244, 67, 54, 0.95);
+  color: white;
+  border: 2px solid #f44336;
+}
+
+.notification-icon {
+  font-size: 20px;
+}
+
+.notification-text {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.notification-close {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s;
+}
+
+.notification-close:hover {
+  opacity: 0.8;
+}
+
+.notification-fade-enter-active,
+.notification-fade-leave-active {
+  transition: all 0.3s ease;
+}
+
+.notification-fade-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.notification-fade-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
 }
 
 </style>

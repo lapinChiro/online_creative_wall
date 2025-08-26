@@ -3,12 +3,13 @@
   "include": [
     "env.d.ts",
     "src/**/*",
-    "src/**/*.vue"
+    "src/**/*.vue",
+    "*.d.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "*.config.*"
+    "*.config.js"
   ],
   "references": [
     {
