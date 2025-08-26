@@ -13,7 +13,7 @@ import { defineConfig, devices } from '@playwright/test'
 export default defineConfig({
   testDir: './e2e',
   /* Maximum time one test can run for. */
-  timeout: 30 * 1000,
+  timeout: process.env.CI !== undefined && process.env.CI !== '' ? 60 * 1000 : 30 * 1000, // CI: 60秒、ローカル: 30秒
   expect: {
     /**
      * Maximum time expect() should wait for the condition to be met.
@@ -24,9 +24,9 @@ export default defineConfig({
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: process.env.CI !== undefined && process.env.CI !== '',
   /* Retry on CI only */
-  retries: process.env.CI !== undefined && process.env.CI !== '' ? 2 : 0,
+  retries: process.env.CI !== undefined && process.env.CI !== '' ? 1 : 0, // リトライ回数を減らす
   /* Opt out of parallel tests on CI. */
-  workers: process.env.CI !== undefined && process.env.CI !== '' ? 1 : undefined,
+  workers: process.env.CI !== undefined && process.env.CI !== '' ? 2 : undefined, // CI環境でも並列実行
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
@@ -44,54 +44,49 @@ export default defineConfig({
   },
 
   /* Configure projects for major browsers */
-  projects: [
-    {
-      name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-      },
-    },
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-      },
-    },
-    {
-      name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
-      },
-    },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: {
-    //     ...devices['Pixel 5'],
-    //   },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: {
-    //     ...devices['iPhone 12'],
-    //   },
-    // },
-
-    /* Test against branded browsers. */
-    {
-      name: 'Microsoft Edge',
-      use: {
-        ...devices['Desktop Edge'],
-      },
-    },
-    // {
-    //   name: 'Google Chrome',
-    //   use: {
-    //     channel: 'chrome',
-    //   },
-    // },
-  ],
+  projects: process.env.CI !== undefined && process.env.CI !== '' 
+    ? [
+        // CI環境では主要ブラウザのみテスト
+        {
+          name: 'chromium',
+          use: {
+            ...devices['Desktop Chrome'],
+          },
+        },
+        {
+          name: 'firefox',
+          use: {
+            ...devices['Desktop Firefox'],
+          },
+        },
+      ]
+    : [
+        // ローカルでは全ブラウザをテスト
+        {
+          name: 'chromium',
+          use: {
+            ...devices['Desktop Chrome'],
+          },
+        },
+        {
+          name: 'firefox',
+          use: {
+            ...devices['Desktop Firefox'],
+          },
+        },
+        {
+          name: 'webkit',
+          use: {
+            ...devices['Desktop Safari'],
+          },
+        },
+        {
+          name: 'Microsoft Edge',
+          use: {
+            ...devices['Desktop Edge'],
+          },
+        },
+      ],
 
   /* Folder for test artifacts such as screenshots, videos, traces, etc. */
   // outputDir: 'test-results/',

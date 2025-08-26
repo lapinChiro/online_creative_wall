@@ -10,6 +10,7 @@ jobs:
   quality-gate:
     name: Quality Gate
     runs-on: ubuntu-latest
+    timeout-minutes: 20  # ジョブ全体のタイムアウトを20分に設定
     
     steps:
       - name: Checkout

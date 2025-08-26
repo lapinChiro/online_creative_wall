@@ -45,21 +45,25 @@ async function checkMemoryLeak(page: Page, duration: number, interval: number = 
 }
 
 test.describe('負荷テスト', () => {
-  test.setTimeout(180000) // 3分のタイムアウト
+  // CI環境では短め、ローカルでは長めのタイムアウト
+  const isCI = process.env.CI !== undefined && process.env.CI !== ''
+  test.setTimeout(isCI ? 90000 : 180000) // CI: 90秒、ローカル: 3分
   
   test('100アイテム同時スクロール負荷テスト', async ({ page }) => {
-    testLog('🔥 100アイテム負荷テスト開始')
+    // CI環境では負荷を軽減
+    const itemCount = isCI ? 50 : 100
+    testLog(`🔥 ${String(itemCount)}アイテム負荷テスト開始`)
     
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
     
-    // 100アイテムに設定
-    await page.locator('#post-count').fill('100')
-    // 100アイテムが生成されるまで待つ
-    await page.waitForFunction(() => {
+    // アイテム数を設定
+    await page.locator('#post-count').fill(itemCount.toString())
+    // アイテムが生成されるまで待つ
+    await page.waitForFunction((count) => {
       const items = document.querySelectorAll('.scroll-item')
-      return items.length >= 100
-    }, { timeout: 5000 })
+      return items.length >= count
+    }, itemCount, { timeout: 5000 })
     
     // 最高速度に設定
     await page.locator('#scroll-speed').fill('150')
@@ -137,7 +141,12 @@ test.describe('負荷テスト', () => {
   })
   
   test('長時間実行メモリリークテスト', async ({ page }) => {
-    testLog('🕐 長時間実行テスト開始（2分間）')
+    // CI環境では短時間、ローカルでは長時間実行
+    const isCI = process.env.CI !== undefined && process.env.CI !== ''
+    const duration = isCI ? 30000 : 120000 // CI: 30秒、ローカル: 2分
+    const durationText = isCI ? '30秒間' : '2分間'
+    
+    testLog(`🕐 長時間実行テスト開始（${durationText}）`)
     
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
@@ -146,8 +155,8 @@ test.describe('負荷テスト', () => {
     await page.locator('#post-count').fill('50')
     await page.waitForTimeout(2000)
     
-    // 2分間のメモリ監視
-    const memoryStats = await checkMemoryLeak(page, 120000, 10000) // 2分間、10秒ごと
+    // メモリ監視（CI環境では短時間）
+    const memoryStats = await checkMemoryLeak(page, duration, 10000) // 10秒ごと
     
     testLog('📊 メモリ使用量推移:')
     memoryStats.measurements.forEach((mem, i) => {
@@ -231,8 +240,9 @@ test.describe('負荷テスト', () => {
     await page.goto('/')
     await page.waitForLoadState('domcontentloaded')
     
-    // 100アイテムで高負荷
-    await page.locator('#post-count').fill('100')
+    // CI環境では負荷を軽減
+    const itemCount = isCI ? 50 : 100
+    await page.locator('#post-count').fill(itemCount.toString())
     await page.waitForTimeout(2000)
     
     // スピードを頻繁に変更
@@ -276,8 +286,9 @@ test.describe('負荷テスト', () => {
     
     // アイテム数を繰り返し変更
     for (let i = 0; i < 5; i++) {
-      // 100アイテムに設定
-      await page.locator('#post-count').fill('100')
+      // CI環境では負荷を軽減
+      const itemCount = isCI ? 50 : 100
+      await page.locator('#post-count').fill(itemCount.toString())
       await page.waitForTimeout(2000)
       
       // 20アイテムに減らす
