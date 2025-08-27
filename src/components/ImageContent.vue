@@ -16,6 +16,7 @@
       :alt="content.title"
       :title="content.title"
       loading="lazy"
+      crossorigin="anonymous"
       @load="handleImageLoad"
       @error="handleImageError"
     >
